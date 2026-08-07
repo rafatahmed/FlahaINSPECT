@@ -1,0 +1,7 @@
+# Default owners for FlahaINSPECT (update GitHub usernames as the team grows).
+# Requires the CODEOWNERS feature on the repository (GitHub Pro/org or public repo).
+
+*       @rafatahmed
+
+# Design and product docs
+/Docs/  @rafatahmed
