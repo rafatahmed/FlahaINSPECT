@@ -14,6 +14,8 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- Web report UX (PR-15 / R2-15): Generate PDF, poll until ready/failed, 409 in-progress banner, download via `/bff/reports/:id/file`.
+
 - Reports + Puppeteer worker (PR-09 / R2-09): manager `POST /projects/:id/reports` (202); KD-39 `409 REPORT_IN_PROGRESS`; 200-point cap; 15m job lease + reclaim; notes HTML-escaped; PDF key `reports/{project}/{id}.pdf`.
 
 - Mobile map (PR-13 / R1-13): flutter_map, category markers, tile policy (KD-35 / G-01). Public OSM is ambient-only; bulk download requires `TILE_PROVIDER_URL`.
