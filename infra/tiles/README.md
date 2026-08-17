@@ -1,5 +1,8 @@
 # Self-hosted tiles (G-01 / KD-43)
 
+**Service and operational pack: Flaha Agri Tech.**  
+Inspectors only talk to this TileServer. Full ownership model: [Docs/ops/tileserver-gl.md](../../Docs/ops/tileserver-gl.md).
+
 Pilot/prod base map is **our** TileServer GL, not `tile.openstreetmap.org`.
 
 Data: **Qatar extract** from Geofabrik (ODbL) → Planetiler MBTiles → raster XYZ.

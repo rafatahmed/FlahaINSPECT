@@ -14,6 +14,7 @@ Cadence for the internal Flaha R2 pilot. Defaults match the technical design. G-
 | Seed users | Staging only | `SEED_PASSWORD` required; seed refuses `NODE_ENV=production`. |
 | Metrics scrape | Continuous | `GET /metrics` (Prometheus text). HTTP duration, TUS hook results, photo bytes, sync/photo lag histograms, `job_total` / `job_dead_letters` from SQL. |
 | Dead-letter jobs | Daily glance | `SELECT type, count(*) FROM jobs WHERE status = 'dead' GROUP BY 1;` Alert if the `job_dead_letters` gauge grows. |
+| TileServer GL (Flaha-owned pack) | Monthly extract rebuild | [tileserver-gl.md](./tileserver-gl.md). Devices only prefetch from our XYZ. Attribution © OpenStreetMap contributors. |
 
 ## SLIs (SQL)
 
