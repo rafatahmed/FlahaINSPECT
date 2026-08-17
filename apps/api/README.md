@@ -27,6 +27,8 @@ Projects (`/v1/projects`): inspectors see assigned only; managers see all non-de
 
 Photos (`/v1/photos`): register metadata + TUS `upload_token` (2h). Re-issue keeps `tus_upload_id` on same hash (KD-34). Hooks at `/internal/tus` finalize and enqueue `generate_thumbnail`.
 
+Sync (`/v1/sync`): keyset delta `GET /projects` and `GET /projects/:id/points` (`since_updated_at` + `since_id`, limit 100/200). Soft-deletes only in `deleted_ids` (KD-38). Archived projects stay in `items`. Optional `POST /telemetry`.
+
 OpenAPI: `openapi/flaha-inspect-v1.yaml`.
 
 ```bash

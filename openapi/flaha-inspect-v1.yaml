@@ -14,6 +14,7 @@ tags:
   - name: Projects
   - name: Inspections
   - name: Photos
+  - name: Sync
 paths:
   /auth/login:
     post:
@@ -410,6 +411,83 @@ paths:
       responses:
         '200':
           description: Metadata + 10-minute signed URLs (audit photo.url_issue)
+  /sync/projects:
+    get:
+      operationId: syncProjects
+      tags: [Sync]
+      security: [{ bearerAuth: [] }]
+      summary: Keyset delta of projects the actor can access (KD-38)
+      description: |
+        Exclusive keyset `(updated_at, id)`. Soft-deleted projects appear only in
+        `deleted_ids`; clients must locally purge that project and all children.
+        Archived projects stay in `items` with `is_archived: true`.
+      parameters:
+        - $ref: '#/components/parameters/SinceUpdatedAt'
+        - $ref: '#/components/parameters/SinceId'
+        - $ref: '#/components/parameters/DeltaLimit'
+      responses:
+        '200':
+          description: One keyset page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectDeltaPage'
+  /sync/projects/{id}/points:
+    get:
+      operationId: syncProjectPoints
+      tags: [Sync]
+      security: [{ bearerAuth: [] }]
+      summary: Keyset delta of inspection points with embedded photo metadata
+      description: |
+        No top-level `photos` array. Photo readiness arrives here because
+        post-finish bumps the parent point `updated_at`. Binaries are not included.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/SinceUpdatedAt'
+        - $ref: '#/components/parameters/SinceId'
+        - $ref: '#/components/parameters/DeltaLimit'
+      responses:
+        '200':
+          description: One keyset page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PointDeltaPage'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Project missing or soft-deleted
+  /sync/telemetry:
+    post:
+      operationId: postSyncTelemetry
+      tags: [Sync]
+      security: [{ bearerAuth: [] }]
+      summary: Optional sampled sync SLI events
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [events]
+              properties:
+                events:
+                  type: array
+                  items:
+                    type: object
+                    required: [type]
+                    properties:
+                      type: { type: string }
+                      client_uuid: { type: string, format: uuid }
+                      captured_at: { type: string, format: date-time }
+                      synced_at: { type: string, format: date-time }
+                      error: { type: string }
+      responses:
+        '200':
+          description: Accepted
 components:
   securitySchemes:
     bearerAuth:
@@ -518,6 +596,115 @@ components:
         server_time:
           type: string
           format: date-time
+    DeltaCursor:
+      type: object
+      required: [since_updated_at, since_id]
+      properties:
+        since_updated_at: { type: string, format: date-time }
+        since_id: { type: string, format: uuid }
+    EmbeddedPhotoMeta:
+      type: object
+      required: [id, client_uuid, status]
+      properties:
+        id: { type: string, format: uuid }
+        client_uuid: { type: string, format: uuid }
+        status: { type: string }
+        sha256: { type: string }
+        byte_size: { type: integer }
+        content_type: { type: string }
+      description: Photo metadata only — no binaries, no signed URLs in delta
+    ProjectDeltaItem:
+      type: object
+      required: [id, name, is_archived, updated_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        code: { type: string, nullable: true }
+        description: { type: string, nullable: true }
+        is_archived: { type: boolean }
+        created_by: { type: string, format: uuid, nullable: true }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        boundary: { type: object, nullable: true }
+        bbox: { type: object, nullable: true }
+    PointDeltaItem:
+      type: object
+      required: [id, client_uuid, project_id, category, latitude, longitude, captured_at, version, photos]
+      properties:
+        id: { type: string, format: uuid }
+        client_uuid: { type: string, format: uuid }
+        project_id: { type: string, format: uuid }
+        inspector_id: { type: string, format: uuid }
+        category: { type: string, enum: [defect, normal, note] }
+        note: { type: string, nullable: true }
+        remarks: { type: string, nullable: true }
+        recommended_procedure: { type: string, nullable: true }
+        status: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        accuracy_m: { type: number, nullable: true }
+        altitude_m: { type: number, nullable: true }
+        heading_deg: { type: number, nullable: true }
+        location_source: { type: string }
+        location_adjusted: { type: boolean }
+        outside_boundary: { type: boolean }
+        captured_at: { type: string, format: date-time }
+        version: { type: integer }
+        updated_at: { type: string, format: date-time }
+        photos:
+          type: array
+          items: { $ref: '#/components/schemas/EmbeddedPhotoMeta' }
+    ProjectDeltaPage:
+      type: object
+      required: [server_time, items, deleted_ids, has_more]
+      properties:
+        server_time: { type: string, format: date-time }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ProjectDeltaItem' }
+        deleted_ids:
+          type: array
+          items: { type: string, format: uuid }
+        next_cursor:
+          allOf:
+            - $ref: '#/components/schemas/DeltaCursor'
+          nullable: true
+        has_more: { type: boolean }
+    PointDeltaPage:
+      type: object
+      required: [server_time, items, deleted_ids, has_more]
+      description: No top-level photos array (KD-38)
+      properties:
+        server_time: { type: string, format: date-time }
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/PointDeltaItem' }
+        deleted_ids:
+          type: array
+          items: { type: string, format: uuid }
+        next_cursor:
+          allOf:
+            - $ref: '#/components/schemas/DeltaCursor'
+          nullable: true
+        has_more: { type: boolean }
+  parameters:
+    SinceUpdatedAt:
+      in: query
+      name: since_updated_at
+      required: false
+      schema: { type: string, format: date-time }
+      description: Exclusive lower bound; must be paired with since_id. Omit both for initial sync.
+    SinceId:
+      in: query
+      name: since_id
+      required: false
+      schema: { type: string, format: uuid }
+      description: Tie-break UUID; must be paired with since_updated_at
+    DeltaLimit:
+      in: query
+      name: limit
+      required: false
+      schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
   responses:
     Unauthorized:
       description: Missing/invalid token or bad credentials

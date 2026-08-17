@@ -25,4 +25,6 @@ test('client covers auth, users, and projects', () => {
   assert.match(client, /\/projects/);
   assert.match(client, /\/inspection-points/);
   assert.match(client, /\/photos/);
+  assert.match(client, /\/sync\/projects/);
+  assert.match(client, /\/sync\/projects\/\$\{projectId\}\/points/);
 });

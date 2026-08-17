@@ -6,6 +6,7 @@ import { InspectionPointsModule } from './inspection-points/inspection-points.mo
 import { PhotosModule } from './photos/photos.module';
 import { ProjectsModule } from './projects/projects.module';
 import { StorageModule } from './storage/storage.module';
+import { SyncModule } from './sync/sync.module';
 import { TusHooksModule } from './tus-hooks/tus-hooks.module';
 import { UsersModule } from './users/users.module';
 
@@ -20,6 +21,7 @@ import { UsersModule } from './users/users.module';
     InspectionPointsModule,
     PhotosModule,
     TusHooksModule,
+    SyncModule,
   ],
 })
 export class AppModule {}
