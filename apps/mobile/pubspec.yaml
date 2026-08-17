@@ -1,7 +1,7 @@
 name: flaha_inspect
 description: FlahaINSPECT field app. Flutter sibling — not a pnpm/turbo package.
 publish_to: "none"
-version: 0.0.1+1
+version: 1.0.0+1
 
 # Flutter SDK pin for humans. CI reads apps/mobile/.flutter-version (exact).
 environment:

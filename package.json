@@ -1,7 +1,7 @@
 {
   "name": "flaha-inspect",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "FlahaINSPECT monorepo — Node packages only; Flutter lives in apps/mobile",
   "packageManager": "pnpm@9.15.9",
   "engines": {
