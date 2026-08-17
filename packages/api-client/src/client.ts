@@ -35,6 +35,35 @@ export type InspectClientOptions = {
   getAccessToken?: () => string | undefined;
 };
 
+export type DeltaCursor = {
+  since_updated_at: string;
+  since_id: string;
+};
+
+export type DeltaPage<T> = {
+  server_time: string;
+  items: T[];
+  deleted_ids: string[];
+  next_cursor: DeltaCursor | null;
+  has_more: boolean;
+};
+
+export type DeltaQuery = {
+  since_updated_at?: string;
+  since_id?: string;
+  limit?: number;
+};
+
+function deltaQuery(query?: DeltaQuery): string {
+  if (!query) return '';
+  const params = new URLSearchParams();
+  if (query.since_updated_at) params.set('since_updated_at', query.since_updated_at);
+  if (query.since_id) params.set('since_id', query.since_id);
+  if (query.limit != null) params.set('limit', String(query.limit));
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
+
 export function createInspectClient(options: InspectClientOptions) {
   const prefix = `${options.baseUrl.replace(/\/$/, '')}${API_PREFIX}`;
 
@@ -122,6 +151,15 @@ export function createInspectClient(options: InspectClientOptions) {
     registerPhoto: (body: Record<string, unknown>) =>
       request<{ photo: unknown }>('POST', '/photos', body),
     getPhoto: (id: string) => request<{ photo: unknown }>('GET', `/photos/${id}`),
+    syncProjects: (query?: DeltaQuery) =>
+      request<DeltaPage<Record<string, unknown>>>('GET', `/sync/projects${deltaQuery(query)}`),
+    syncProjectPoints: (projectId: string, query?: DeltaQuery) =>
+      request<DeltaPage<Record<string, unknown>>>(
+        'GET',
+        `/sync/projects/${projectId}/points${deltaQuery(query)}`,
+      ),
+    postSyncTelemetry: (events: Array<Record<string, unknown>>) =>
+      request<{ ok: true; accepted: number }>('POST', '/sync/telemetry', { events }),
   };
 }
 

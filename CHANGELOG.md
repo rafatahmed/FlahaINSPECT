@@ -14,6 +14,10 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- Keyset delta sync (PR-08 / R1-08): `GET /sync/projects` and `GET /sync/projects/:id/points`. KD-38 split `items` / `deleted_ids`; OpenAPI freeze for mobile.
+
+### Added (earlier)
+
 - Photos + TUS hooks + thumbnail jobs (PR-07 / R1-07). Register state table (KD-34), parent `updated_at` bump, 10-minute signed URLs.
 
 ### Added (earlier)
@@ -51,6 +55,7 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 - R1-04 marked **done** after merge of PR #16.
 - R1-05 marked **done** after merge of PR #17.
 - R1-06 marked **done** after merge of PR #18.
+- R1-07 marked **done** after merge of PR #19.
 
 ---
 

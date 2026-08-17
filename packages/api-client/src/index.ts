@@ -8,4 +8,7 @@ export {
   type InspectClientOptions,
   type PublicUser,
   type SessionResponse,
+  type DeltaCursor,
+  type DeltaPage,
+  type DeltaQuery,
 } from './client';
