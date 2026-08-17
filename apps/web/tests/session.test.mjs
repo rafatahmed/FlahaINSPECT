@@ -38,6 +38,16 @@ test('transparent brand marks are published for web', () => {
   assert.match(shell, /variant=\"white\"/);
 });
 
+test('captured timestamps are UTC not host locale', () => {
+  for (const rel of ['components/dashboard-client.tsx', 'components/point-editor.tsx']) {
+    const src = readFileSync(join(root, rel), 'utf8');
+    assert.match(src, /formatCapturedAt/);
+    assert.doesNotMatch(src, /toLocaleString/);
+  }
+  const helper = readFileSync(join(root, 'lib/datetime.ts'), 'utf8');
+  assert.match(helper, /toISOString/);
+});
+
 test('photo img src uses BFF not a signed S3 URL (KD-41)', () => {
   const src = readFileSync(join(root, 'components/point-editor.tsx'), 'utf8');
   assert.match(src, /\/bff\/photos\/\$\{photo\.id\}\/thumb/);

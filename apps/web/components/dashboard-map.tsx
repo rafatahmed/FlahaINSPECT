@@ -1,17 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
 import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet';
 import { categoryColor, categoryLabel } from '@/lib/category';
+import type { MapPoint } from '@/lib/map-point';
 import 'leaflet/dist/leaflet.css';
 
-export type MapPoint = {
-  id: string;
-  latitude: number;
-  longitude: number;
-  category: string;
-  status: string;
-};
+export type { MapPoint };
 
 export function DashboardMap({ points }: { points: MapPoint[] }) {
   const center: [number, number] = points[0]
@@ -19,10 +13,6 @@ export function DashboardMap({ points }: { points: MapPoint[] }) {
     : [25.286, 51.534];
   const tiles =
     process.env.NEXT_PUBLIC_TILE_PROVIDER_URL ?? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-
-  useEffect(() => {
-    // leaflet default icon paths break under webpack; we only use CircleMarker.
-  }, []);
 
   return (
     <MapContainer center={center} zoom={13} className="map" scrollWheelZoom>

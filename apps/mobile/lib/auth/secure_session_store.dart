@@ -5,7 +5,15 @@ import 'session_store.dart';
 /// iOS Keychain / Android Keystore. Keys are not Drift columns (KD-37).
 class SecureSessionStore implements SessionStore {
   SecureSessionStore({FlutterSecureStorage? storage})
-      : _storage = storage ?? const FlutterSecureStorage();
+      : _storage =
+            storage ??
+            const FlutterSecureStorage(
+              // Default EncryptedSharedPreferences can hang on first write (API 35 emulator).
+              aOptions: AndroidOptions(
+                encryptedSharedPreferences: true,
+                resetOnError: true,
+              ),
+            );
 
   static const accessKey = 'flaha.access_token';
   static const refreshKey = 'flaha.refresh_token';

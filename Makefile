@@ -23,7 +23,8 @@ endif
 
 .PHONY: help install lint test typecheck build \
 	api-dev web-dev worker-dev dev \
-	mobile-bootstrap mobile-get mobile-generate mobile-analyze mobile-test mobile-run \
+	mobile-bootstrap mobile-bootstrap-android mobile-get mobile-generate mobile-analyze mobile-test \
+	mobile-run mobile-run-android mobile-run-windows mobile-doctor \
 	up down logs ps smoke migrate migrate-twice seed
 
 help:
@@ -32,7 +33,9 @@ help:
 	@echo "  make lint test typecheck build"
 	@echo "  make api-dev | web-dev | worker-dev | dev"
 	@echo "  make mobile-bootstrap   install pinned Flutter (once per machine)"
-	@echo "  make mobile-get | mobile-generate | mobile-analyze | mobile-test | mobile-run"
+	@echo "  make mobile-bootstrap-android  Android SDK + flaha_inspect_api35 AVD"
+	@echo "  make mobile-get | mobile-generate | mobile-analyze | mobile-test"
+	@echo "  make mobile-run | mobile-run-android | mobile-run-windows | mobile-doctor"
 	@echo "  make up | down | logs | ps | smoke"
 	@echo "  make migrate | migrate-twice | seed"
 
@@ -67,6 +70,13 @@ dev:
 mobile-bootstrap:
 	pwsh -File $(MOBILE)/tool/bootstrap-flutter.ps1
 
+# API 35 only. Uninstalls Flutter-floated NDK / API 36. AVD may land on D:.
+mobile-bootstrap-android:
+	pwsh -File $(MOBILE)/tool/bootstrap-android.ps1
+
+mobile-doctor:
+	$(FLUTTER) doctor -v
+
 mobile-get:
 	cd $(MOBILE) && $(FLUTTER) pub get
 
@@ -81,6 +91,13 @@ mobile-test:
 
 mobile-run:
 	cd $(MOBILE) && $(FLUTTER) run --dart-define=API_BASE_URL=http://127.0.0.1:3001
+
+# Android emulator reaches the host via 10.0.2.2 (not 127.0.0.1).
+mobile-run-android:
+	cd $(MOBILE) && $(FLUTTER) run -d android --dart-define=API_BASE_URL=http://10.0.2.2:3001 --dart-define=FLAVOR=dev
+
+mobile-run-windows:
+	cd $(MOBILE) && $(FLUTTER) run -d windows --dart-define=API_BASE_URL=http://127.0.0.1:3001 --dart-define=FLAVOR=dev
 
 up:
 	$(COMPOSE) up -d --build

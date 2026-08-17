@@ -4,10 +4,12 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { CATEGORY_LEGEND } from '@/lib/category';
-import type { MapPoint } from './dashboard-map';
+import { formatCapturedAt } from '@/lib/datetime';
+import type { MapPoint } from '@/lib/map-point';
 
 const DashboardMap = dynamic(() => import('./dashboard-map').then((m) => m.DashboardMap), {
   ssr: false,
+  loading: () => <div className="map" aria-hidden />,
 });
 
 type Project = { id: string; name: string; is_archived?: boolean };
@@ -128,7 +130,7 @@ export function DashboardClient({
             <tbody>
               {points.map((p) => (
                 <tr key={p.id} onClick={() => router.push(`/points/${p.id}`)} style={{ cursor: 'pointer' }}>
-                  <td>{p.captured_at ? new Date(p.captured_at).toLocaleString() : '—'}</td>
+                  <td>{formatCapturedAt(p.captured_at)}</td>
                   <td>{p.category}</td>
                   <td>{p.status}</td>
                   <td>{p.inspector_id?.slice(0, 8) ?? '—'}</td>

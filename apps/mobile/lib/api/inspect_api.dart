@@ -167,11 +167,12 @@ class InspectApi {
     Map<String, String>? headers,
     Object? body,
   }) {
+    const timeout = Duration(seconds: 15);
     switch (method) {
       case 'GET':
-        return http.get(uri, headers: headers);
+        return http.get(uri, headers: headers).timeout(timeout);
       case 'POST':
-        return http.post(uri, headers: headers, body: body);
+        return http.post(uri, headers: headers, body: body).timeout(timeout);
       default:
         throw UnsupportedError('HTTP $method');
     }

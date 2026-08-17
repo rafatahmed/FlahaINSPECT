@@ -1,12 +1,11 @@
 'use client';
 
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 
-export function LoginForm() {
+export function LoginForm({ next = '/dashboard' }: { next?: string }) {
   const router = useRouter();
-  const next = useSearchParams().get('next') ?? '/dashboard';
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -41,9 +40,25 @@ export function LoginForm() {
     <form className="login" onSubmit={(e) => void onSubmit(e)}>
       <BrandMark variant="color" height={96} />
       <label htmlFor="email">Email</label>
-      <input id="email" name="email" type="email" autoComplete="username" required disabled={busy} />
+      <input
+        id="email"
+        name="email"
+        type="email"
+        autoComplete="username"
+        required
+        disabled={busy}
+        suppressHydrationWarning
+      />
       <label htmlFor="password">Password</label>
-      <input id="password" name="password" type="password" autoComplete="current-password" required disabled={busy} />
+      <input
+        id="password"
+        name="password"
+        type="password"
+        autoComplete="current-password"
+        required
+        disabled={busy}
+        suppressHydrationWarning
+      />
       <button type="submit" disabled={busy}>
         {busy ? '…' : 'Log in'}
       </button>
