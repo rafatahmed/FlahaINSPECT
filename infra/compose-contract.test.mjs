@@ -47,6 +47,7 @@ test('pilot e2e covers login point tus list PDF', () => {
   assert.match(e2e, /\/v1\/auth\/login/);
   assert.match(e2e, /\/v1\/inspection-points/);
   assert.match(e2e, /tus-resumable/);
+  assert.match(e2e, /authorization \$\{b64\(uploadToken\)\}/);
   assert.match(e2e, /\/v1\/projects\/\$\{projectId\}\/reports/);
   assert.match(e2e, /\/metrics/);
 });

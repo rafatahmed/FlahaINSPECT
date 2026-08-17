@@ -118,6 +118,7 @@ async function main() {
         `filename ${b64('probe.png')}`,
         `filetype ${b64('image/png')}`,
         `photo_client_uuid ${b64(photoClient)}`,
+        `authorization ${b64(uploadToken)}`,
       ].join(','),
     },
   });

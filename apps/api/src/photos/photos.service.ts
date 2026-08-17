@@ -12,7 +12,13 @@ import {
   decidePhotoRegister,
   type PhotoStatus,
 } from './photo-register-state';
-import { extractBearer, signUploadToken, verifyUploadToken } from './upload-token';
+import {
+  tusRequestHeader,
+  tusUploadFromHook,
+  uploadTokenFromHook,
+  type TusHookBody,
+} from './tus-hook-body';
+import { signUploadToken, verifyUploadToken } from './upload-token';
 import { LoginLimiter } from '../auth/login-limiter';
 import { recordPhotoBytes, recordPhotoUploadLag } from '../metrics/registry';
 
@@ -148,7 +154,8 @@ export class PhotosService {
   }
 
   async preCreate(headers: Record<string, string | undefined>, body: TusHookBody) {
-    const token = extractBearer(headers.authorization) ?? body.Upload?.MetaData?.authorization;
+    const upload = tusUploadFromHook(body);
+    const token = uploadTokenFromHook(headers.authorization, body);
     const secret = process.env.JWT_ACCESS_SECRET;
     if (!token || !secret) {
       throw new ApiException(ErrorCode.UNAUTHORIZED);
@@ -159,18 +166,16 @@ export class PhotosService {
     } catch {
       throw new ApiException(ErrorCode.UNAUTHORIZED);
     }
-    const length = body.Upload?.Size ?? Number(headers['upload-length']);
+    const length =
+      upload.Size ??
+      Number(headers['upload-length'] ?? tusRequestHeader(body, 'upload-length'));
     if (!Number.isFinite(length) || length > MAX_UPLOAD) {
       throw new ApiException(ErrorCode.PAYLOAD_TOO_LARGE);
     }
     if (length !== claims.byte_size) {
       throw new ApiException(ErrorCode.VALIDATION_ERROR, undefined, 'upload length does not match register');
     }
-    const ctype = (
-      body.Upload?.MetaData?.filetype ??
-      body.Upload?.MetaData?.contentType ??
-      'image/jpeg'
-    ).toLowerCase();
+    const ctype = (upload.MetaData?.filetype ?? upload.MetaData?.contentType ?? 'image/jpeg').toLowerCase();
     if (!ALLOWED_TYPES.has(ctype)) {
       throw new ApiException(ErrorCode.VALIDATION_ERROR, undefined, 'content-type not allowed');
     }
@@ -184,7 +189,7 @@ export class PhotosService {
     if (row.byteSize !== claims.byte_size) {
       throw new ApiException(ErrorCode.VALIDATION_ERROR);
     }
-    const tusId = body.Upload?.ID;
+    const tusId = upload.ID;
     if (tusId && !row.tusUploadId) {
       await this.db.update(photos).set({ tusUploadId: tusId, status: 'uploading' }).where(eq(photos.id, row.id));
     } else if (row.status === 'pending_upload') {
@@ -194,9 +199,10 @@ export class PhotosService {
   }
 
   async postFinish(body: TusHookBody) {
-    const meta = body.Upload?.MetaData ?? {};
+    const upload = tusUploadFromHook(body);
+    const meta = upload.MetaData ?? {};
     const clientUuid = meta.photo_client_uuid ?? meta.inspection_id;
-    const tusId = body.Upload?.ID;
+    const tusId = upload.ID;
     const row = clientUuid
       ? await this.byClient(clientUuid)
       : tusId
@@ -210,9 +216,9 @@ export class PhotosService {
     }
 
     const tusKey =
-      body.Upload?.Storage?.Key ??
+      upload.Storage?.Key ??
       (tusId ? `uploads/${tusId}` : null);
-    const size = (tusKey ? await this.storage.headSize(tusKey) : null) ?? body.Upload?.Size;
+    const size = (tusKey ? await this.storage.headSize(tusKey) : null) ?? upload.Size;
     if (size != null && size !== row.byteSize) {
       await this.failPhoto(row.id, row.inspectionPointId);
       throw new ApiException(ErrorCode.HASH_MISMATCH);
@@ -364,12 +370,4 @@ export type RegisterInput = {
   original_filename?: string;
 };
 
-export type TusHookBody = {
-  Type?: string;
-  Upload?: {
-    ID?: string;
-    Size?: number;
-    MetaData?: Record<string, string>;
-    Storage?: { Key?: string };
-  };
-};
+export type { TusHookBody } from './tus-hook-body';
