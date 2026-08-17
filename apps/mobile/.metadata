@@ -1,17 +1,33 @@
 # This file tracks properties of this Flutter project.
-# Used by Flutter tool to assess capabilities and perform upgrades.
+# Used by Flutter tool to assess capabilities and perform upgrades etc.
 #
 # This file should be version controlled and should not be manually edited.
 
 version:
-  revision: "r0-design-freeze-scaffold"
+  revision: "4cf24164269a5ebf0c16a028a00727d0e77bbb05"
   channel: "stable"
 
 project_type: app
 
-# Package ID locked in the TDD (KD-25).
-# Generate android/ios/linux/macos/windows with:
-#   flutter create --org com.flaha --project-name flaha_inspect --platforms=android,ios .
+# Tracks metadata for the flutter migrate command
 migration:
-  platforms: []
-  unmanaged_files: []
+  platforms:
+    - platform: root
+      create_revision: 4cf24164269a5ebf0c16a028a00727d0e77bbb05
+      base_revision: 4cf24164269a5ebf0c16a028a00727d0e77bbb05
+    - platform: android
+      create_revision: 4cf24164269a5ebf0c16a028a00727d0e77bbb05
+      base_revision: 4cf24164269a5ebf0c16a028a00727d0e77bbb05
+    - platform: windows
+      create_revision: 4cf24164269a5ebf0c16a028a00727d0e77bbb05
+      base_revision: 4cf24164269a5ebf0c16a028a00727d0e77bbb05
+
+  # User provided section
+
+  # List of Local paths (relative to this file) that should be
+  # ignored by the migrate tool.
+  #
+  # Files that are not part of the templates will be ignored by default.
+  unmanaged_files:
+    - 'lib/main.dart'
+    - 'ios/Runner.xcodeproj/project.pbxproj'

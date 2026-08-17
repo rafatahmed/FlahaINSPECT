@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { categoryLabel, STATUS_OPTIONS } from '@/lib/category';
+import { formatCapturedAt } from '@/lib/datetime';
 
 type Photo = { id: string; status: string };
 type Point = {
@@ -86,7 +87,7 @@ export function PointEditor({ point }: { point: Point }) {
         <p>
           <strong>{categoryLabel(point.category)}</strong>
         </p>
-        <p className="muted">Captured {new Date(point.captured_at).toLocaleString()}</p>
+        <p className="muted">Captured {formatCapturedAt(point.captured_at)}</p>
         <p className="muted">Inspector {point.inspector_id}</p>
         <p className="muted">Accuracy {point.accuracy_m ?? '—'} m</p>
         <p className="muted">Outside boundary: {point.outside_boundary ? 'yes' : 'no'}</p>

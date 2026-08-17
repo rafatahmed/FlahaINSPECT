@@ -1,10 +1,10 @@
-import { Suspense } from 'react';
 import { LoginForm } from '@/components/login-form';
 
-export default function LoginPage() {
-  return (
-    <Suspense>
-      <LoginForm />
-    </Suspense>
-  );
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
+  return <LoginForm next={next && next.startsWith('/') ? next : '/dashboard'} />;
 }

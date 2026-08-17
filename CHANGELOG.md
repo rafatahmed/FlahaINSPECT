@@ -20,6 +20,9 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 ### Changed
 
 - CI node + compose jobs enable pnpm via corepack (no `pnpm/action-setup`). Same 429-at-Set-up-job class as `subosito/flutter-action`.
+- Mobile Android pin: compile/target SDK 35, no NDK, Gradle heap 1.5 GiB (Flutter 3.47 defaults were API 36 + ~2 GiB NDK + 8 GiB heap).
+- Web hydration: UTC timestamps; login `next` from the server; Leaflet stays client-only.
+- Mobile login: HTTP 15s timeout; Android secure-storage `resetOnError`; 512px color mark (full-res stays in `brand/`).
 
 ### Added (earlier)
 
