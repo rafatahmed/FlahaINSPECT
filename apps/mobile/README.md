@@ -74,6 +74,10 @@ flutter run --dart-define=API_BASE_URL=http://127.0.0.1:3001
 
 CI: `.github/workflows/ci.yml` job `flutter sibling` — pin + pub get + generate + dirty check + analyze + test. Not turbo.
 
+## Capture (PR-11)
+
+Create-once: one photo + category required. GPS accuracy soft-warns above 10 m. Pin adjust is pre-save only. Save writes point + photo + `CreateInspectionPoint` + `UploadPhoto` in one Drift transaction. Upload candidate is 1920px JPEG 80 with GPS EXIF stripped (KD-8 / KD-36).
+
 ## API
 
 `--dart-define=API_BASE_URL=http://127.0.0.1:3001` (Android emulator: `http://10.0.2.2:3001`).

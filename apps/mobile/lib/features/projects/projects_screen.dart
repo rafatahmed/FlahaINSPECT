@@ -1,5 +1,6 @@
 import 'package:flaha_inspect/auth/login_copy.dart';
 import 'package:flaha_inspect/data/project_repository.dart';
+import 'package:flaha_inspect/features/projects/project_home.dart';
 import 'package:flutter/material.dart';
 
 class ProjectsScreen extends StatefulWidget {
@@ -9,12 +10,14 @@ class ProjectsScreen extends StatefulWidget {
     required this.online,
     required this.onLogout,
     this.gpsLabel = 'GPS —',
+    this.capture,
   });
 
   final ProjectCatalog projects;
   final bool online;
   final VoidCallback onLogout;
   final String gpsLabel;
+  final CaptureBindings? capture;
 
   @override
   State<ProjectsScreen> createState() => _ProjectsScreenState();
@@ -98,7 +101,10 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   onRefresh: () async => _reload(),
                   child: ListView.builder(
                     itemCount: items.length,
-                    itemBuilder: (context, i) => _ProjectTile(item: items[i]),
+                    itemBuilder: (context, i) => _ProjectTile(
+                      item: items[i],
+                      capture: widget.capture,
+                    ),
                   ),
                 );
               },
@@ -111,8 +117,9 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 }
 
 class _ProjectTile extends StatelessWidget {
-  const _ProjectTile({required this.item});
+  const _ProjectTile({required this.item, this.capture});
   final ProjectListItem item;
+  final CaptureBindings? capture;
 
   @override
   Widget build(BuildContext context) {
@@ -130,10 +137,12 @@ class _ProjectTile extends StatelessWidget {
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
-                      builder: (_) => Scaffold(
-                        appBar: AppBar(title: Text(item.name)),
-                        body: const Center(child: Text('Map — PR-13')),
-                      ),
+                      builder: (_) => capture == null
+                          ? Scaffold(
+                              appBar: AppBar(title: Text(item.name)),
+                              body: const Center(child: Text('Map — PR-13')),
+                            )
+                          : ProjectHomeScreen(project: item, bindings: capture!),
                     ),
                   );
                 },

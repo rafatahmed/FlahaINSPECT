@@ -21,7 +21,7 @@ This file is the implementation plan you track against. Do not invent a second p
 
 **Status values:** `not-started` · `in-progress` · `blocked` · `done` · `deferred`
 
-**Current release in progress:** **R1** (branch `feat/pr-10-mobile-auth`). R0 tag: `r0-design-freeze`. R1-01–R1-08 merged.
+**Current release in progress:** **R1** (branch `feat/pr-11-capture`). R0 tag: `r0-design-freeze`. R1-01–R1-08 and R1-10 merged.
 
 ---
 
@@ -117,8 +117,8 @@ Dependencies are hard. Do not start a row whose deps are not `done`.
 | R1-06 | PR-06 | Inspection points API | R1-05 | `done` | Idempotent create KD-31; manager PATCH only remarks/procedure/status; KD-40 lengths |
 | R1-07 | PR-07 | Photos + TUS hooks + thumbs | R1-06, R1-02 | `done` | State table + **KD-34**; parent `updated_at` bump; private hooks |
 | R1-08 | PR-08 | Keyset delta freeze | R1-06, R1-07 | `done` | KD-38; OpenAPI frozen for mobile; `PROJECT_ARCHIVED` |
-| R1-10 | PR-10 | Mobile Drift, secure login, project list | R1-04, R1-05 | `in-progress` | Wireframe 01+02; no tokens in Drift |
-| R1-11 | PR-11 | Capture + GPS + one photo + outbox | R1-10 | `not-started` | Wireframe 04; EXIF GPS strip; create-once |
+| R1-10 | PR-10 | Mobile Drift, secure login, project list | R1-04, R1-05 | `done` | Wireframe 01+02; no tokens in Drift |
+| R1-11 | PR-11 | Capture + GPS + one photo + outbox | R1-10 | `in-progress` | Wireframe 04; EXIF GPS strip; create-once |
 | R1-12 | PR-12 | Sync worker + TUS (push then delta) | R1-07 (push), R1-08 (delta) | `not-started` | Wireframe 05; resume after kill; Wi-Fi only |
 | R1-14 | PR-14 | Web BFF, map, editor | R1-04–R1-08 | `not-started` | Wireframe 06+07; KD-41 media; category legend |
 
