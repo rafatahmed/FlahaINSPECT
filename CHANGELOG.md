@@ -14,6 +14,18 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- (none yet)
+
+---
+
+## [1.0.0] — 2026-08-17
+
+R2 full MVP. Tag `v1.0.0`. Capture → sync → dashboard → PDF; Flaha Agri Tech TileServer GL (KD-43); offline pack download on device.
+
+**Outcomes (O-):** implemented. Device-measured p50/p95 for O-2…O-5 and on-site pack size for O-8 are **not written yet** — record them here after the first internal project.
+
+### Added
+
 - Offline map pack (R2-13): Download map / progress / delete cache against the Flaha TileServer URL (z12–17, +300 m). Public OSM bulk still refused (KD-35).
 
 - TileServer GL ops: [Docs/ops/tileserver-gl.md](Docs/ops/tileserver-gl.md) — Flaha Agri Tech owns the service and operational Qatar pack; OSM geometry remains ODbL.

@@ -15,7 +15,7 @@ import 'package:flaha_inspect/sync/outbox_worker.dart';
 import 'package:flaha_inspect/sync/tus_client.dart';
 import 'package:flutter/material.dart';
 
-const appVersion = '0.0.1';
+const appVersion = '1.0.0';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
