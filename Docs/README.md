@@ -9,6 +9,7 @@
 | 3 | [GAPS](./GAPS.md) | Residual decisions, blockers, and finishing checklist. |
 | 4 | [CHANGELOG](../CHANGELOG.md) | What changed, when, and why. |
 | 5 | [Wireframes](./Wireframes/) | **UX of record** for R1/R2 screens. |
+| 6 | [Ops / pilot checklist](./ops/pilot-checklist.md) | Backups, GC, flags, SLIs (PR-16). |
 
 ## Non-normative (do not implement from these)
 

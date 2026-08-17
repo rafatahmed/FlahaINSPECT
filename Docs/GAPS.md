@@ -53,7 +53,7 @@ R0 exit: all rows above `done`. **PR-01 may start.**
 | G-01 | Named tile vendor or self-hosted tile URL for staging/prod | PR-13 **device/pilot build** | `open` | Local/dev: OSM ambient only, no bulk scrape | Platform |
 | G-02 | Production cloud region / data residency confirmation | First **external-client** data (not internal Flaha pilot) | `open` | KD-30: single region nearest Flaha ops | Legal + platform |
 | G-04 | App distribution (MDM vs store) | Devices leaving staging | `open` | Internal sideload / TestFlight / internal Play for R1 | Mobile |
-| G-05 | Retention months after project archive | PR-16 GC job numbers | `open` | 12 months of **upload candidates** | Ops |
+| G-05 | Retention months after project archive | PR-16 GC job numbers | `open` | 12 months of **upload candidates** (`RETENTION_ARCHIVE_MONTHS`, wired in PR-16) | Ops |
 | G-07 | SQLCipher + file-at-rest required? | First **external-client** pilot | `open` | Internal Flaha R1: accepted risk (KD-29) | Owner |
 
 ### Does not block R1 or R2

@@ -3,6 +3,7 @@ import { S3Client } from '@aws-sdk/client-s3';
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
 import { claimJob, finishJob, reclaimExpiredLeases } from '../jobs/claimer';
+import { handleGc, maybeEnqueueGc } from '../jobs/gc.handler';
 import { handleReport } from '../jobs/report.handler';
 import { handleThumbnail } from '../jobs/thumbnail.handler';
 
@@ -52,6 +53,7 @@ export class PollerService implements OnModuleInit, OnModuleDestroy {
     this.running = true;
     try {
       await reclaimExpiredLeases(this.pool);
+      await maybeEnqueueGc(this.pool);
       const job = await claimJob(this.pool, this.workerId);
       if (!job) return;
       try {
@@ -62,6 +64,8 @@ export class PollerService implements OnModuleInit, OnModuleDestroy {
           await handleThumbnail(this.pool, this.s3, process.env.S3_BUCKET, job.payload.photo_id);
         } else if (job.type === 'generate_report' && job.payload.report_id) {
           await handleReport(this.pool, this.s3, process.env.S3_BUCKET, job.payload.report_id);
+        } else if (job.type === 'gc_orphan_object') {
+          await handleGc(this.pool, this.s3, process.env.S3_BUCKET);
         } else {
           throw new Error(`unhandled job type ${job.type}`);
         }

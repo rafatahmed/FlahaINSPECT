@@ -14,6 +14,7 @@ import {
 } from './photo-register-state';
 import { extractBearer, signUploadToken, verifyUploadToken } from './upload-token';
 import { LoginLimiter } from '../auth/login-limiter';
+import { recordPhotoBytes, recordPhotoUploadLag } from '../metrics/registry';
 
 const MAX_UPLOAD = 25 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png']);
@@ -28,6 +29,9 @@ export class PhotosService {
   ) {}
 
   async register(actor: AuthUser, input: RegisterInput, _ip: string) {
+    if (process.env.UPLOADS_ENABLED === 'false') {
+      throw new ApiException(ErrorCode.FORBIDDEN, undefined, 'uploads disabled');
+    }
     this.registerLimit.assertCanAttempt(actor.id, actor.id);
     this.registerLimit.recordAttempt(actor.id);
 
@@ -238,6 +242,15 @@ export class PhotosService {
         type: 'generate_thumbnail',
         payload: { photo_id: row.id },
       });
+    }
+    recordPhotoBytes(row.byteSize);
+    const [parent] = await this.db
+      .select({ capturedAt: inspectionPoints.capturedAt })
+      .from(inspectionPoints)
+      .where(eq(inspectionPoints.id, row.inspectionPointId))
+      .limit(1);
+    if (parent?.capturedAt) {
+      recordPhotoUploadLag((Date.now() - parent.capturedAt.getTime()) / 1000);
     }
     return { ok: true };
   }

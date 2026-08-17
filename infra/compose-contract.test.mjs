@@ -37,6 +37,18 @@ test('.env.example includes TILE_PROVIDER_URL (KD-35) and hook secret', () => {
   assert.match(envExample, /^TILE_PROVIDER_URL=/m);
   assert.match(envExample, /^TUSD_HOOK_SECRET=/m);
   assert.match(envExample, /^S3_BUCKET=/m);
+  assert.match(envExample, /^RETENTION_ARCHIVE_MONTHS=12/m);
+  assert.match(envExample, /^UPLOADS_ENABLED=/m);
+  assert.match(envExample, /^PDF_ENABLED=/m);
+});
+
+test('pilot e2e covers login point tus list PDF', () => {
+  const e2e = readFileSync(join(root, 'infra', 'e2e', 'pilot-smoke.mjs'), 'utf8');
+  assert.match(e2e, /\/v1\/auth\/login/);
+  assert.match(e2e, /\/v1\/inspection-points/);
+  assert.match(e2e, /tus-resumable/);
+  assert.match(e2e, /\/v1\/projects\/\$\{projectId\}\/reports/);
+  assert.match(e2e, /\/metrics/);
 });
 
 test('compose runs PostGIS, MinIO, tusd, api, and worker', () => {

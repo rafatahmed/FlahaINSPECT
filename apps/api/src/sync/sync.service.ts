@@ -7,6 +7,7 @@ import type { Db } from '../db/client';
 import { inspectionPoints, photos, projectMembers, projects } from '../db/schema';
 import { asGeoJson } from '../projects/geo';
 import { projectAccess } from '../projects/project-access';
+import { recordSyncDeltaItems } from '../metrics/registry';
 import { keysetAfter, parseDeltaQuery, splitDeltaPage } from './keyset';
 
 @Injectable()
@@ -47,6 +48,7 @@ export class SyncService {
       .limit(cursor.limit + 1);
 
     const split = splitDeltaPage(rows, cursor.limit);
+    recordSyncDeltaItems(split.items.length + split.deleted_ids.length);
     return {
       server_time: new Date().toISOString(),
       items: split.items.map((row) => ({
@@ -92,6 +94,7 @@ export class SyncService {
       .limit(cursor.limit + 1);
 
     const split = splitDeltaPage(rows, cursor.limit);
+    recordSyncDeltaItems(split.items.length + split.deleted_ids.length);
     const photoByPoint = await this.photosFor(split.items.map((row) => row.id));
     return {
       server_time: new Date().toISOString(),
