@@ -1,0 +1,22 @@
+{
+  "name": "@flaha/inspect-api-client",
+  "version": "0.0.0",
+  "private": true,
+  "description": "OpenAPI-generated TypeScript client (hand stub until PR-05 codegen)",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts",
+      "require": "./dist/index.js",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "lint": "node -e \"process.exit(0)\"",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --test tests/exports.test.mjs"
+  }
+}

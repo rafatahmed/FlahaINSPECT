@@ -1,0 +1,7 @@
+# Node workspaces only. apps/mobile is a Flutter sibling and MUST stay out
+# of this file (Turborepo / pnpm do not build it). See apps/mobile/README.md.
+packages:
+  - "apps/api"
+  - "apps/web"
+  - "apps/worker"
+  - "packages/*"

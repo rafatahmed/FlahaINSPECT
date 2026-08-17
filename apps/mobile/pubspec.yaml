@@ -1,0 +1,20 @@
+name: flaha_inspect
+description: FlahaINSPECT field app. Flutter sibling — not a pnpm/turbo package.
+publish_to: "none"
+version: 0.0.1+1
+
+environment:
+  sdk: ">=3.5.0 <4.0.0"
+  flutter: ">=3.24.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
