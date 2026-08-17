@@ -14,6 +14,8 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- Offline map pack (R2-13): Download map / progress / delete cache against the Flaha TileServer URL (z12–17, +300 m). Public OSM bulk still refused (KD-35).
+
 - TileServer GL ops: [Docs/ops/tileserver-gl.md](Docs/ops/tileserver-gl.md) — Flaha Agri Tech owns the service and operational Qatar pack; OSM geometry remains ODbL.
 
 - G-01 **decided** (KD-43): self-hosted TileServer GL + Qatar extract (`infra/tiles/`, compose profile `tiles`). Not public OSM. Unblocks R2-13.

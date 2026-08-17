@@ -6,6 +6,7 @@ import 'package:flaha_inspect/data/map_repository.dart';
 import 'package:flaha_inspect/features/projects/project_home.dart';
 import 'package:flaha_inspect/features/projects/projects_screen.dart';
 import 'package:flaha_inspect/l10n/locale_policy.dart';
+import 'package:flaha_inspect/map/offline_pack.dart';
 import 'package:flaha_inspect/map/tile_policy.dart';
 import 'package:flutter/material.dart';
 
@@ -18,6 +19,7 @@ class FlahaInspectApp extends StatefulWidget {
     this.capture,
     this.maps,
     this.tiles,
+    this.packs,
   });
 
   final AuthGateway auth;
@@ -26,6 +28,7 @@ class FlahaInspectApp extends StatefulWidget {
   final CaptureBindings? capture;
   final MapRepository? maps;
   final TilePolicy? tiles;
+  final OfflinePacks? packs;
 
   @override
   State<FlahaInspectApp> createState() => _FlahaInspectAppState();
@@ -114,6 +117,7 @@ class _FlahaInspectAppState extends State<FlahaInspectApp> {
       capture: widget.capture,
       maps: widget.maps,
       tiles: widget.tiles,
+      packs: widget.packs,
       onLogout: () async {
         await widget.auth.logout();
         if (!mounted) return;

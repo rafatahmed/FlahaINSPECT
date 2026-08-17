@@ -115,6 +115,8 @@ Create-once: one photo + category required. GPS accuracy is always shown and sof
 
 EN/AR keys live in `lib/l10n/app_*.arb`. The UI locale is locked to English (no login toggle). Arabic + RTL is a resource scaffold for R3 (G-09).
 
+Offline pack (R2-13): on the map, **Download map** prefetches z12–17 (+300 m) from `TILE_PROVIDER_URL` (Flaha TileServer). **Delete cache** removes the project store. Public OSM cannot bulk-download.
+
 ## API
 
 `--dart-define=API_BASE_URL=http://127.0.0.1:3001` (Android emulator: `http://10.0.2.2:3001`).
