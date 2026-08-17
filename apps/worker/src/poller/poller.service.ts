@@ -71,6 +71,13 @@ export class PollerService implements OnModuleInit, OnModuleDestroy {
         this.log.error(message);
         await finishJob(this.pool, job.id, false, message);
       }
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code === '42P01') {
+        this.log.warn('schema not ready — poller idle until migrate');
+      } else {
+        this.log.error(err instanceof Error ? err.message : 'tick failed');
+      }
     } finally {
       this.running = false;
     }

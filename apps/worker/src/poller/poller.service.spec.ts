@@ -18,5 +18,6 @@ describe('PollerService', () => {
     expect(src).toContain('generate_report');
     expect(src).toContain('reclaimExpiredLeases');
     expect(src).toContain('handleReport');
+    expect(src).toContain('42P01');
   });
 });

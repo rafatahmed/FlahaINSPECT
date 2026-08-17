@@ -13,4 +13,9 @@ describe('reports routes', () => {
     expect(svc).toContain('generate_report');
     expect(svc).toContain('report.download');
   });
+
+  it('imports AuthModule so JwtAuthGuard can resolve AUTH_STORE', () => {
+    const mod = readFileSync(join(__dirname, 'reports.module.ts'), 'utf8');
+    expect(mod).toContain('AuthModule');
+  });
 });
