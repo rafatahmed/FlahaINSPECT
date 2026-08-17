@@ -12,9 +12,14 @@ Field inspectors capture geotagged photos with a single category (**Defect** / *
 
 | Item | State |
 |------|--------|
-| Product name | **FlahaINSPECT** (legacy docs may say FlahaINSPCT) |
-| Repository | Docs + design baseline; application code not scaffolded yet |
+| Product name | **FlahaINSPECT** |
+| Repository | Docs + **design freeze**; application code not scaffolded yet |
+| Current release | **R0 complete** (2026-08-17) — next is **R1 / PR-01** |
 | Design of record | [`Docs/FlahaINSPECT - Technical Design (MVP).md`](Docs/FlahaINSPECT%20-%20Technical%20Design%20(MVP).md) |
+| Plan / tracking | [`Docs/ROADMAP.md`](Docs/ROADMAP.md) |
+| Gaps | [`Docs/GAPS.md`](Docs/GAPS.md) |
+| Changelog | [`CHANGELOG.md`](CHANGELOG.md) |
+| UX of record | [`Docs/Wireframes/`](Docs/Wireframes/) |
 
 ---
 
@@ -52,16 +57,22 @@ FlahaINSPECT/
 
 ## Documentation
 
+Start at [`Docs/README.md`](Docs/README.md). Short map:
+
 | Document | Purpose |
 |----------|---------|
-| [Technical Design (MVP)](Docs/FlahaINSPECT%20-%20Technical%20Design%20(MVP).md) | Locked scope, architecture, schemas, API, PR plan |
-| [Overview](Docs/FlahaINSPECT%20-%20OverView.md) | Product feasibility and roadmap notes |
-| [System Schematics](Docs/FlahaINSPCT%20System%20Schematics.md) | Flow diagrams / system sketch |
-| [Offline sync](Docs/FlahaINSPECT%20-%20Offline%20sync.md) | Outbox and sync strategy |
-| [Resumable photo uploads](Docs/FlahaINSPECT%20-%20Resumable%20photo%20uploads.md) | TUS approach |
-| [Offline map tile caching](Docs/FlahaINSPECT%20-%20Offline%20map%20tile%20caching.md) | Field maps without connectivity |
-| [External GNSS receivers](Docs/FlahaINSPECT%20-%20External%20GNSS%20receivers.md) | Post-MVP precision GPS |
-| [UI mockups](Docs/Photo/) | Dashboard and mobile screen references |
+| [Technical Design (MVP)](Docs/FlahaINSPECT%20-%20Technical%20Design%20(MVP).md) | **Design of record** — schema, API, sync, security, PR plan |
+| [Roadmap](Docs/ROADMAP.md) | Phases R0–R3, release exit criteria, work-item tracking |
+| [Gaps](Docs/GAPS.md) | Residual decisions and finishing register |
+| [Changelog](CHANGELOG.md) | What changed; how to record future changes |
+| [Wireframes](Docs/Wireframes/) | **UX of record** for R1/R2 |
+| [Overview](Docs/FlahaINSPECT%20-%20OverView.md) | Non-normative feasibility notes |
+| [System Schematics](Docs/FlahaINSPECT%20-%20System%20Schematics.md) | Non-normative sketch |
+| [Offline sync](Docs/FlahaINSPECT%20-%20Offline%20sync.md) | Non-normative |
+| [Resumable photo uploads](Docs/FlahaINSPECT%20-%20Resumable%20photo%20uploads.md) | Non-normative |
+| [Offline map tile caching](Docs/FlahaINSPECT%20-%20Offline%20map%20tile%20caching.md) | Non-normative |
+| [External GNSS receivers](Docs/FlahaINSPECT%20-%20External%20GNSS%20receivers.md) | Non-normative, **post-MVP** |
+| [Photo/ images](Docs/Photo/) | Mood only — not acceptance |
 
 ---
 
@@ -82,9 +93,10 @@ This repo is set up for a secure monorepo baseline:
 
 Scaffolding will follow the technical design PR plan (monorepo + Docker Compose + Flutter app). Until then:
 
-1. Read the [Technical Design (MVP)](Docs/FlahaINSPECT%20-%20Technical%20Design%20(MVP).md).
-2. Keep secrets out of git; use `.env.example` patterns once apps exist.
-3. Prefer **pnpm** for Node workspaces; Flutter via its own CLI in `apps/mobile`.
+1. Read the [Roadmap](Docs/ROADMAP.md) then the [Technical Design (MVP)](Docs/FlahaINSPECT%20-%20Technical%20Design%20(MVP).md).
+2. Do not start PR-01 until R0 on the roadmap is `done` (it is).
+3. Keep secrets out of git; use `.env.example` patterns once apps exist.
+4. Prefer **pnpm** for Node workspaces; Flutter via its own CLI in `apps/mobile`.
 
 ```bash
 # After monorepo scaffold (not available yet)

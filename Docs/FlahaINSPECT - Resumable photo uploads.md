@@ -1,4 +1,6 @@
-**Resumable photo uploads are critical for FlahaINSPCT.** High-resolution inspection photos (often 5–15+ MB) will frequently fail or interrupt on remote farm/landscape sites with flaky connectivity. Restarting from byte 0 wastes time, battery, and data. A proper resumable system lets the upload continue exactly from the last confirmed offset.
+> **Non-normative.** Exploratory TUS notes only. Design of record: [`FlahaINSPECT - Technical Design (MVP).md`](./FlahaINSPECT%20-%20Technical%20Design%20(MVP).md). Locked MVP is **metadata-first** then TUS (not photo-first linking). Resume must keep `tus_upload_id` across upload-token rotation (KD-34). Product name is **FlahaINSPECT**.
+
+**Resumable photo uploads are critical for FlahaINSPECT.** High-resolution inspection photos (often 5–15+ MB) will frequently fail or interrupt on remote farm/landscape sites with flaky connectivity. Restarting from byte 0 wastes time, battery, and data. A proper resumable system lets the upload continue exactly from the last confirmed offset.
 
 ### Recommended Protocol: TUS (tus.io)
 TUS is an open HTTP-based protocol specifically designed for resumable uploads. It is the strongest fit here:
@@ -12,7 +14,7 @@ TUS is an open HTTP-based protocol specifically designed for resumable uploads. 
 
 S3 Multipart Upload is a solid alternative (especially for parallel parts) but requires more custom state management on pure mobile. TUS is simpler and more consistent across platforms for this use case.
 
-### End-to-End Flow for FlahaINSPCT
+### End-to-End Flow for FlahaINSPECT
 1. **Photo capture (offline-capable)**  
    Save original (or high-quality) file to app-controlled storage.  
    Compute SHA-256 hash + file size.  

@@ -5,11 +5,12 @@
 | **Document title** | FlahaINSPECT Technical Design (MVP) |
 | **Product** | **FlahaINSPECT** (legacy docs may spell FlahaINSPCT; public name and package IDs use **FlahaINSPECT**) |
 | **Author** | Flaha Engineering (placeholder) |
-| **Date** | 2026-08-07 |
-| **Status** | Draft (revised post-review) |
+| **Date** | 2026-08-17 |
+| **Status** | **Design freeze (pre-PR-01)** — implement from this document + [`ROADMAP.md`](./ROADMAP.md) |
+| **Companion docs** | [`ROADMAP.md`](./ROADMAP.md) (phases/releases), [`GAPS.md`](./GAPS.md) (residual register), [`../CHANGELOG.md`](../CHANGELOG.md), [`Wireframes/`](./Wireframes/) (UX of record) |
 | **Audience** | Senior engineers implementing from a greenfield monorepo |
 | **Bundle / package IDs** | Mobile: `com.flaha.inspect`; API title: `FlahaINSPECT API`; npm scope: `@flaha/inspect-*` |
-| **Source docs** | `Docs/FlahaINSPECT - OverView.md`, `Docs/FlahaINSPCT System Schematics.md`, `Docs/FlahaINSPECT - Offline sync.md`, `Docs/FlahaINSPECT - Resumable photo uploads.md`, `Docs/FlahaINSPECT - Offline map tile caching.md`, `Docs/FlahaINSPECT - External GNSS receivers.md`, `Docs/Photo/` mockups |
+| **Source docs** | Satellite notes (non-normative): `Docs/FlahaINSPECT - OverView.md`, `Docs/FlahaINSPECT - System Schematics.md`, `Docs/FlahaINSPECT - Offline sync.md`, `Docs/FlahaINSPECT - Resumable photo uploads.md`, `Docs/FlahaINSPECT - Offline map tile caching.md`, `Docs/FlahaINSPECT - External GNSS receivers.md`. UX of record: `Docs/Wireframes/`. `Docs/Photo/` mockups are mood only. |
 
 ---
 
@@ -55,6 +56,9 @@ Today, site rounds often produce scattered photos (WhatsApp, camera roll) withou
 | Arabic day-one | Overview improvement #9 | EN primary; AR scaffolding PR-17 | Pilot risk accepted; critical strings can ship EN-only |
 | Client comments | Schematics “read + comments” | **Comments deferred**; client role post-MVP | Security + scope |
 | Timeline | Overview 6–10 weeks | Slim pilot 6–8 w / full 10–14 w | Honest vs 17-PR breadth |
+| Server originals / EXIF | Overview: keep camera originals + GPS EXIF | **Operational evidence only (KD-36):** 1920px JPEG, GPS EXIF stripped; no forensic master on server | See Photo evidence decision |
+| Tile source | Maps paper: OSM or Mapbox/vector freely | **Dev OSM only; pilot/prod contracted or self-hosted (KD-35)** | OSM bulk pre-cache ToS |
+| Dual role columns | Schematics: per-project + global | **`users.role` authorizes; membership is assignment only (KD-33)** | Stops FORBIDDEN drift |
 
 ---
 
@@ -449,7 +453,8 @@ CREATE INDEX projects_updated_at_id_idx ON projects (updated_at, id);
 CREATE TABLE project_members (
   project_id      UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   user_id         UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  member_role     user_role NOT NULL,
+  -- Schema-ready for future per-project roles. MVP MUST NOT read this for AuthZ (KD-33).
+  member_role     user_role NOT NULL DEFAULT 'inspector',
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (project_id, user_id)
 );
@@ -538,6 +543,9 @@ CREATE TABLE reports (
 );
 
 CREATE INDEX reports_project_idx ON reports (project_id, created_at DESC);
+CREATE UNIQUE INDEX reports_one_active_per_project
+  ON reports (project_id)
+  WHERE status IN ('queued', 'processing');
 
 -- DURABLE JOBS (replaces Redis for MVP)
 CREATE TABLE jobs (
@@ -711,8 +719,10 @@ Server generates all keys. Clients never choose object paths. UUIDs in path resi
 ```text
 users_local (
   id TEXT PK, email TEXT, full_name TEXT, role TEXT,
-  access_token TEXT, refresh_token TEXT, token_expires_at INTEGER,
   token_version INTEGER
+  -- NEVER store access_token or refresh_token here (KD-37).
+  -- Tokens live only in platform secure storage (iOS Keychain / Android Keystore).
+  -- Optional: last_auth_at INTEGER for UX; not a credential.
 )
 
 projects (
@@ -761,7 +771,8 @@ photos (
   content_type TEXT NOT NULL,
   width_px INTEGER, height_px INTEGER,
   tus_url TEXT, tus_offset INTEGER NOT NULL DEFAULT 0,
-  upload_token TEXT,                 -- short-lived from POST /photos
+  upload_token TEXT,                 -- short-lived TUS create/resume token (≤2h); not an auth session
+  tus_upload_id TEXT,                -- durable TUS session id; MUST survive token rotation (KD-34)
   sync_status TEXT NOT NULL,
   progress_pct REAL NOT NULL DEFAULT 0,
   last_error TEXT,
@@ -865,7 +876,7 @@ Content-Type: `application/json` unless TUS binary.
 - Timestamps ISO-8601 UTC.
 - **Delta keyset:** `?since_updated_at=&since_id=&limit=` (see Sync).
 - List: keyset or cursor pagination; default 50, max 200.
-- Point list/detail **embeds** photo metadata + **short-lived signed thumbnail URLs** (avoid N+1).
+- Point list/detail **embeds** photo metadata. Web loads bytes via BFF (KD-41). Mobile may use short-lived signed URLs from `GET /photos/:id` on demand.
 - OpenAPI `operationId`s match sequence names (e.g. `createInspectionPoint`, `registerPhoto`, `tusPreCreate`, `createReport`).
 
 ### Error catalog (MVP)
@@ -884,8 +895,25 @@ Content-Type: `application/json` unless TUS binary.
 | 422 | `PHOTO_NOT_REGISTERED` | TUS complete without row |
 | 422 | `HASH_MISMATCH` | Complete hash ≠ registered |
 | 409 | `PHOTO_ALREADY_EXISTS` | Second photo for a point (MVP one-photo rule / UNIQUE) |
+| 409 | `REPORT_IN_PROGRESS` | Second PDF while one is queued/processing for that project |
+| 422 | `PROJECT_ARCHIVED` | Capture/upload against an archived project |
+| 422 | `TEXT_TOO_LONG` | note / remarks / procedure / name over max length |
 | 429 | `RATE_LIMITED` | Auth/TUS create limits |
+| 429 | `ACCOUNT_LOCKED` | Too many failed logins for that email (15 min window) |
 | 503 | `DEPENDENCY_UNAVAILABLE` | Storage/DB |
+
+**Field length & sanitization (KD-40) — reject at API, same caps in Drift:**
+
+| Field | Max | Rules |
+|-------|-----|--------|
+| `users.full_name`, `projects.name`, `projects.code` | 200 | trim; code `[A-Za-z0-9._-]` |
+| `email` | 254 | lower(trim) |
+| `note`, `remarks`, `recommended_procedure` | **4000** | plain text; strip `NUL`; no HTML |
+| `original_filename` | 255 | basename only |
+| `client_device_info` JSON | 4 KiB | allowlisted keys only (`platform`, `model`, `os`, `app_version`) |
+| `filters_json` | 8 KiB | |
+
+Web and PDF **escape as text** (never interpolate notes into Puppeteer HTML unescaped). Dashboard editors are `<textarea>` / text, not rich HTML.
 
 ```json
 {
@@ -901,13 +929,15 @@ Content-Type: `application/json` unless TUS binary.
 
 | Method | Path | Body | Response / notes |
 |--------|------|------|------------------|
-| POST | `/auth/login` | `{ email, password }` | tokens + user; rate limit 10/min/IP |
+| POST | `/auth/login` | `{ email, password }` | tokens + user; rate limit **10/min/IP** and **10 failures / email / 15 min** then 429 `ACCOUNT_LOCKED` (same response if email unknown) |
 | POST | `/auth/refresh` | `{ refresh_token }` | new access + refresh; rotate; reuse → revoke family |
 | POST | `/auth/logout` | `{ refresh_token }` | 204 revoke |
 | GET | `/auth/me` | — | user + **`min_app_version`**, `server_time` |
-| POST | `/auth/set-password` | `{ user_id, new_password }` | **manager only** (pilot password reset) |
+| POST | `/auth/set-password` | `{ user_id, new_password }` | **manager only** (pilot password reset). **MUST** increment `users.token_version` and revoke **all** refresh-token families for that user in the same transaction. Existing access JWTs fail `ver` check immediately. |
 
 JWT access claims: `sub`, `role`, `email`, **`ver`** (= `users.token_version`). On each request, if `ver` ≠ DB `token_version`, reject access (force re-login after role/password change).
+
+**AuthZ source of truth (KD-33):** every route reads **`users.role`** plus, for inspectors, a `project_members` row. Do **not** authorize from `project_members.member_role`. Managers may access all non-deleted projects. Inspectors may access only assigned projects. Rows with role `client` are ignored while `client_role_enabled=false` (login rejected).
 
 **No public self-service forgot-password in MVP** (email infra deferred). Manager sets password for inspectors.
 
@@ -1052,8 +1082,9 @@ API **rejects** unknown fields including `note`, `category`, `latitude` on manag
 | Existing status | Request sha256/size vs row | Server behavior |
 |-----------------|----------------------------|-----------------|
 | *(no row)* | — | Insert row `pending_upload`; mint **new** `upload_token` + `upload_url`; **201** |
-| `pending_upload`, `uploading`, `failed` | **same** hash+size | Keep row; clear `tus_upload_id` if re-issuing; mint **new** `upload_token` (always rotate on re-issue); **200** |
-| `pending_upload`, `uploading`, `failed` | **different** hash+size | **Allow** metadata refresh (client recompressed): update `sha256`, `byte_size`, width/height; clear `tus_upload_id`/`storage_key`; status → `pending_upload`; mint **new** `upload_token`; **200** |
+| `pending_upload`, `uploading` | **same** hash+size | Keep row **and keep `tus_upload_id`** if set (KD-34). Mint **new** `upload_token` bound to the **same** TUS session (token rotation ≠ new upload). Client resumes via HEAD + PATCH on existing URL. **200** |
+| `failed` | **same** hash+size | Keep hash/size; **clear** `tus_upload_id`/`storage_key` (previous object is untrusted); mint new token + new TUS session; status → `pending_upload`; **200** |
+| `pending_upload`, `uploading`, `failed` | **different** hash+size | **Allow** metadata refresh (client recompressed): update `sha256`, `byte_size`, width/height; **clear** `tus_upload_id`/`storage_key` (content changed); status → `pending_upload`; mint **new** `upload_token`; **200** |
 | `processing` | any | **200** with current metadata; **no** new upload_token (wait for hook/thumb); client may poll GET |
 | `ready` | same or any | **200** no-op: existing metadata + **signed URLs**; **no** new TUS session; do not change hash |
 | Different `inspection_point_id` than existing row | — | **409** `CONFLICT_IDEMPOTENCY` |
@@ -1061,7 +1092,9 @@ API **rejects** unknown fields including `note`, `category`, `latitude` on manag
 
 **Rules locked:**
 
-- Always **rotate** `upload_token` when re-issuing an upload (expired token ≤2h is normal; client simply `POST /photos` again).  
+- Always **rotate** `upload_token` when re-issuing (expired token ≤2h is normal; client `POST /photos` again).  
+- **Never clear `tus_upload_id` solely because the token expired** (KD-34). Token expiry is expected on flaky links; the TUS object and offset must survive.  
+- Clear `tus_upload_id` only when: content hash/size changed, previous session `failed`, or tusd reports the session gone (then start a new TUS create).  
 - Metadata refresh (sha256/size) **only** while status ∈ `{pending_upload, uploading, failed}` — never after `ready`.  
 - `ready` re-POST is idempotent success with URLs (sync worker safe).  
 - Thumbnail job completing `processing` → `ready` also bumps parent point `updated_at` once (same as post-finish if status was set ready in one step).
@@ -1131,13 +1164,12 @@ LIMIT $limit;
 
 **Initial sync:** omit `since_*` (or epoch + zero UUID).
 
-**Response:**
+**Response (single shape — no top-level `photos` array):**
 
 ```json
 {
   "server_time": "2026-08-07T12:00:00.000Z",
-  "items": [ /* projects or points */ ],
-  "photos": [ /* metadata for points page */ ],
+  "items": [ /* living rows only; points embed photo metadata (no binaries) */ ],
   "deleted_ids": [ "…" ],
   "next_cursor": {
     "since_updated_at": "2026-08-07T11:59:01.123Z",
@@ -1147,11 +1179,29 @@ LIMIT $limit;
 }
 ```
 
-- Soft-deleted rows with `updated_at` advanced appear only in `deleted_ids` (not full payloads).  
-- Archived projects: included with `is_archived: true` when changed; mobile disables capture.  
+**Deleted-ids algorithm (KD-38):**
+
+```sql
+-- One keyset page, then split in the application:
+SELECT id, updated_at, deleted_at, /* other columns for live rows */
+FROM <projects | inspection_points>
+WHERE (updated_at, id) > ($since_updated_at, $since_id::uuid)
+  AND /* membership / assigned projects */
+ORDER BY updated_at ASC, id ASC
+LIMIT $limit;
+
+-- items      = rows WHERE deleted_at IS NULL
+-- deleted_ids = rows WHERE deleted_at IS NOT NULL  (ids only; no payload)
+-- next_cursor = last row of the page (whether live or deleted)
+```
+
+- Soft-deleted rows with `updated_at` advanced appear **only** in `deleted_ids`.  
+- **Project soft-delete:** the project id is listed in `/sync/projects` `deleted_ids`. Clients **must** locally hide/remove that project and all of its points/photos **without** waiting for each child id on the points delta.  
+- Archived projects: included in `items` with `is_archived: true`; mobile disables capture. Offline creates queued after archive must fail on push with `PROJECT_ARCHIVED` (422); outbox item becomes `failed` with that code.  
 - Client **must** use server `next_cursor` only (never client clock).  
 - Mobile stores per-scope cursor in `sync_state`.  
-- Inspectors pull **all points** on assigned projects (map context); photo **metadata only** — binaries via signed URL on demand / after sync for own captures.
+- Inspectors pull **all points** on assigned projects (map context); photo **metadata only**, **embedded on each point**. Binaries via BFF proxy (web) or on-demand `GET /photos/:id` (mobile).  
+- `outside_boundary` is **historical at capture time**. Boundary PATCH does not rewrite existing flags (document on PDF as “as captured”).
 
 Optional: `POST /sync/telemetry` `{ events: [{ type, client_uuid, captured_at, synced_at, error? }] }` for pilot SLIs (sampled).
 
@@ -1159,7 +1209,7 @@ Optional: `POST /sync/telemetry` `{ events: [{ type, client_uuid, captured_at, s
 
 | Method | Path | Notes |
 |--------|------|-------|
-| POST | `/projects/:id/reports` | **manager only**; 202 + report id; enqueues `generate_report` job |
+| POST | `/projects/:id/reports` | **manager only**; 202 + report id; enqueues `generate_report` job. **KD-39:** at most one `queued` or `processing` report per project. A second POST returns **409 `REPORT_IN_PROGRESS`** with the existing `report_id`. After `ready` or `failed`, a new POST is allowed. |
 | GET | `/reports/:id` | status + download URL when ready; audit on URL issue |
 | GET | `/projects/:id/reports` | history |
 
@@ -1241,6 +1291,19 @@ on connectivity OR SyncNow OR periodic (e.g. 60s foreground):
 
 ## Photo Upload Design
 
+### Evidence class (KD-36) — locked
+
+MVP photos are **operational evidence**, not forensic / court-grade originals.
+
+| Artifact | Where | Purpose |
+|----------|--------|---------|
+| Camera original | **Device only** | User review; discarded after synced **and** age &gt; 7 days (or user clear) |
+| Upload candidate | Device + **server object** | System of record (1920 px, JPEG 80, GPS EXIF stripped) |
+| SHA-256 | Of **upload candidate** | Integrity of what the server stores, not of the camera file |
+| Server thumb | 512 px | Dashboard / PDF |
+
+Do **not** promise clients “full-resolution camera files with GPS EXIF.” A future `store_originals` flag (post-MVP) can add a second object key; it is not in R1/R2.
+
 ### Capture & compression
 
 | Artifact | Spec |
@@ -1269,7 +1332,7 @@ on connectivity OR SyncNow OR periodic (e.g. 60s foreground):
 | POST /photos before point | 422 `PHOTO_PARENT_MISSING` |
 | TUS finish before register | Reject hook; object GC later |
 | Double post-finish | Idempotent ready state |
-| Failed mid-upload retry | New TUS session, same photo row |
+| Failed mid-upload retry | Resume existing TUS session if `tus_upload_id` still valid; new session only if session missing or status `failed` |
 | DB fail after S3 write | GC job removes unreferenced keys |
 
 ### Retention
@@ -1285,8 +1348,10 @@ on connectivity OR SyncNow OR periodic (e.g. 60s foreground):
 ### Mobile
 
 - **Library:** flutter_map + FMTC (**KD-9**). MapLibre OfflineManager is a documented alternative if vector offline becomes required.  
-- **Provider default (dev/pilot):** OSM-compatible raster with **User-Agent** `FlahaINSPECT/1.0` and attribution; commercial satellite deferred (Open Question residual for prod procurement only).  
-- **Pre-cache:** boundary/bbox + **300 m** buffer, zoom **12–17**.  
+- **Provider (KD-35):**  
+  - **local/dev:** OSM-compatible raster, User-Agent `FlahaINSPECT/1.0`, visible attribution; **no automated bulk region download against public OSM** (ambient cache of tiles the engineer already viewed is OK).  
+  - **staging/pilot/production:** contracted commercial tiles **or** self-hosted tile pack. PR-13 does **not** merge to a device build until `TILE_PROVIDER_URL` + license notes exist in `.env.example`.  
+- **Pre-cache (pilot+ only, against the licensed source):** boundary/bbox + **300 m** buffer, zoom **12–17**.  
 - **Overlays:** boundary, category markers, user location, accuracy circle.  
 - **Out-of-boundary:** allow capture; flag `outside_boundary`.
 
@@ -1313,7 +1378,8 @@ on connectivity OR SyncNow OR periodic (e.g. 60s foreground):
 
 - Login form → Next.js server action/route → API login → set **HttpOnly Secure** cookies (`access_token`, `refresh_token` or single session cookie referencing server session).  
 - Browser never stores tokens in `localStorage`.  
-- CSRF: SameSite=Lax + origin checks on mutations.
+- CSRF: SameSite=Lax + origin checks on mutations.  
+- **Media (KD-41):** the browser **does not** persist signed S3 URLs as long-lived image `src`s. Dashboard thumbs/full images load via Next.js BFF routes, e.g. `GET /bff/photos/:id/thumb` and `GET /bff/photos/:id` (session cookie → API membership check → 302 or stream). Mobile uses `GET /photos/:id` on demand. List JSON may include `thumbnail_url` + `thumbnail_url_expires_in` as a hint; if remaining TTL &lt; 60s the client must refetch or use the BFF path.
 
 ### PDF contents (MVP)
 
@@ -1387,7 +1453,8 @@ When a `generate_report` job is claimed, set `reports.status = 'processing'` in 
 
 | Control | MVP |
 |---------|-----|
-| Tokens | Keychain / Keystore only |
+| Tokens | **Keychain / Keystore only** (KD-37). Drift `users_local` has **no** token columns. |
+| Photo files at rest | App sandbox; backup-excluded. SQLCipher (if enabled) does **not** encrypt files — treat originals as plaintext on disk. Pilot gate applies to **DB + files**. |
 | Photo backup exclusion | iOS `NSURLIsExcludedFromBackupKey`; Android appropriately |
 | Remote wipe | Refresh revoke + next sync forces re-login; local data remains until uninstall (document) |
 | App passcode | Optional setting |
@@ -1561,6 +1628,16 @@ Redis adds compose/ops. **SQL `jobs` + worker** locked for MVP reliability witho
 | KD-30 | **Data residency default: single region nearest Flaha ops** (confirm before prod) | Unblocks local/staging |
 | KD-31 | **Idempotent point create = `INSERT … ON CONFLICT DO NOTHING` + SELECT**; never UPDATE on conflict; 409 if payload differs | Prevents delta noise from retries |
 | KD-32 | **Job lease 15m + reclaim; reports.status coupled to jobs.status** | PDF crash recovery |
+| KD-33 | **AuthZ = `users.role` + membership assignment; ignore `member_role`** | One RBAC story; managers see all projects |
+| KD-34 | **TUS token rotation does not clear `tus_upload_id`** | Resume after 2h token expiry |
+| KD-35 | **Dev OSM only; pilot/prod tiles contracted or self-hosted** | OSM bulk-download ToS |
+| KD-36 | **Server stores compressed operational photo, not camera original** | Honest evidence class |
+| KD-37 | **Access/refresh tokens never in Drift / SQLite** | Stolen-device blast radius |
+| KD-38 | **Delta: split keyset page into `items` vs `deleted_ids`; no top-level photos array; project delete cascades locally** | Implementable sync |
+| KD-39 | **One active (queued/processing) report per project** | Puppeteer OOM / double-click |
+| KD-40 | **Plain-text length caps + HTML-escape in web/PDF** | XSS / Puppeteer injection |
+| KD-41 | **Web media via BFF; do not rely on 10-minute signed URLs in the SPA** | Dead thumbs |
+| KD-42 | **Login: 10/min/IP + 10 failures/email/15 min lockout** | Password spray |
 
 ---
 
@@ -1585,31 +1662,36 @@ Redis adds compose/ops. **SQL `jobs` + worker** locked for MVP reliability witho
 
 *(Blocking items converted to Key Decisions with defaults above. Residual non-blocking:)*
 
-1. **Production basemap procurement:** stay on OSM-compatible or pay for satellite (Mapbox/etc.) for client-facing PDFs? Default OSM for engineering.  
-2. **Exact cloud region / residency** for production (KD-30 default; legal confirm).  
-3. **SSO later** (Azure AD/Google) for Flaha staff?  
-4. **App distribution:** private MDM vs store?  
-5. **Retention months** after project archive (default 12 months originals)?  
-6. **Enable client role** timeline after pilot?  
-7. **SQLCipher** required before first external client pilot? (gate)  
+1. **Exact production tile vendor / self-host** (KD-35 locks the *policy*; vendor name still TBD — **blocks PR-13 device build**, not PR-01). Tracked in [`GAPS.md`](./GAPS.md) as G-01.  
+2. **Exact cloud region / residency** for production (KD-30 default; legal confirm). **Blocks first external-client data** (G-02).  
+3. **SSO later** (Azure AD/Google) for Flaha staff? Post-R2 (G-03).  
+4. **App distribution:** private MDM vs store? Needed before inspector devices leave staging (G-04).  
+5. **Retention months** after project archive (default 12 months of *upload candidates*)? Confirm with ops (G-05).  
+6. **Enable client role** timeline after pilot? Post-R2 (G-06).  
+7. **SQLCipher + file protection** required before first *external client* pilot? Gate (G-07).  
+8. **Forensic originals (`store_originals`)** — explicitly **not** R1/R2 (KD-36). Revisit only if sales/legal require it (G-08).
 
 ---
 
 ## References
 
-- `Docs/FlahaINSPECT - OverView.md`  
-- `Docs/FlahaINSPCT System Schematics.md`  
-- `Docs/FlahaINSPECT - Offline sync.md`  
-- `Docs/FlahaINSPECT - Resumable photo uploads.md`  
-- `Docs/FlahaINSPECT - Offline map tile caching.md`  
-- `Docs/FlahaINSPECT - External GNSS receivers.md`  
-- `Docs/Photo/` mockups  
+- `Docs/ROADMAP.md`, `Docs/GAPS.md`, `CHANGELOG.md`  
+- `Docs/Wireframes/` (UX of record)  
+- `Docs/FlahaINSPECT - OverView.md` (non-normative)  
+- `Docs/FlahaINSPECT - System Schematics.md` (non-normative)  
+- `Docs/FlahaINSPECT - Offline sync.md` (non-normative)  
+- `Docs/FlahaINSPECT - Resumable photo uploads.md` (non-normative)  
+- `Docs/FlahaINSPECT - Offline map tile caching.md` (non-normative)  
+- `Docs/FlahaINSPECT - External GNSS receivers.md` (non-normative / post-MVP)  
+- `Docs/Photo/` (mood only; not acceptance)  
 - [tus.io](https://tus.io)  
 - PostGIS documentation  
 
 ---
 
 ## PR Plan
+
+**Track status on [`ROADMAP.md`](./ROADMAP.md)** (R1/R2 work-item table). This section is the implementation contract for each PR; do not fork a second plan.
 
 Ordered, independently reviewable PRs. Effort is **engineer-days (ed)** rough for one mid/senior; parallelize across 2–3 people.
 
@@ -1627,6 +1709,7 @@ Ordered, independently reviewable PRs. Effort is **engineer-days (ed)** rough fo
 - **Files:** compose, MinIO private bucket policy, tusd hook env, `.env.example`, no Redis  
 - **Dependencies:** PR-01  
 - **Effort:** 2 ed  
+- **Acceptance:** tusd hook ports **not** published to the host; MinIO buckets private; `TILE_PROVIDER_URL` placeholder in `.env.example` (KD-35).
 
 ### PR-03 — Database schema & migrations (Drizzle + raw SQL)
 
@@ -1635,6 +1718,7 @@ Ordered, independently reviewable PRs. Effort is **engineer-days (ed)** rough fo
 - **Dependencies:** PR-02  
 - **Effort:** 3 ed  
 - **Locks:** KD-16, KD-17 schema pieces  
+- **Acceptance:** `reports_one_active_per_project` unique index; `member_role` present but unused for AuthZ.
 
 ### PR-04 — Auth module + OpenAPI baseline + error catalog
 
@@ -1642,6 +1726,7 @@ Ordered, independently reviewable PRs. Effort is **engineer-days (ed)** rough fo
 - **Files:** AuthModule, set-password (manager), error filter catalog, `openapi/flaha-inspect-v1.yaml` auth paths, tests  
 - **Dependencies:** PR-03  
 - **Effort:** 3 ed  
+- **Acceptance:** `set-password` bumps `token_version` and revokes refresh families; KD-42 lockout; error catalog includes `ACCOUNT_LOCKED`, `REPORT_IN_PROGRESS`, `PROJECT_ARCHIVED`, `TEXT_TOO_LONG`.
 
 ### PR-05 — Users, projects, memberships + api-client generate
 
@@ -1664,7 +1749,7 @@ Ordered, independently reviewable PRs. Effort is **engineer-days (ed)** rough fo
 - **Files:** PhotosModule, internal hooks, worker thumbnail handler, signed URLs 10m, rate limits, GC stub  
 - **Dependencies:** PR-06, PR-02  
 - **Effort:** 5 ed  
-- **Acceptance:** `UNIQUE (inspection_point_id)`; `POST /photos` state table (token rotate, ready no-op, hash refresh only pre-ready); post-finish + ready **bump parent point `updated_at`** so delta clients see photo status; 409 `PHOTO_ALREADY_EXISTS` on second photo.  
+- **Acceptance:** `UNIQUE (inspection_point_id)`; `POST /photos` state table (token rotate **without** clearing `tus_upload_id` on same hash — KD-34; ready no-op; hash refresh only pre-ready); post-finish + ready **bump parent point `updated_at`**; 409 `PHOTO_ALREADY_EXISTS` on second photo.
 
 ### PR-08 — Sync delta keyset endpoints (OpenAPI freeze for mobile sync)
 
@@ -1672,6 +1757,7 @@ Ordered, independently reviewable PRs. Effort is **engineer-days (ed)** rough fo
 - **Files:** SyncModule, `(updated_at,id)` cursors, deleted_ids, archive flags, OpenAPI **freeze milestone for PR-12**, client regen, optional telemetry  
 - **Dependencies:** PR-06, PR-07  
 - **Effort:** 3 ed  
+- **Acceptance:** KD-38 split (`items` vs `deleted_ids`); no top-level `photos` array; project `deleted_ids` implies local child purge; `PROJECT_ARCHIVED` on create against archived project.  
 - **Note:** Heavy mobile sync should not start before this freeze; thinner push-only can start after PR-06/07.
 
 ### PR-09 — Reports + Puppeteer worker
@@ -1680,14 +1766,15 @@ Ordered, independently reviewable PRs. Effort is **engineer-days (ed)** rough fo
 - **Files:** ReportsModule, worker `generate_report`, 200-point cap, stream thumbs, download audit  
 - **Dependencies:** PR-06, PR-07, PR-03 jobs, PR-02 worker service  
 - **Effort:** 5 ed  
-- **Acceptance:** 15m job lease + reclaim; `reports.status` coupled to `jobs.status` (queued/processing/ready/failed); never orphan report in `processing` with dead job.  
+- **Acceptance:** 15m job lease + reclaim; `reports.status` coupled to `jobs.status`; never orphan report in `processing` with dead job; second POST while queued/processing → 409 `REPORT_IN_PROGRESS` (KD-39); notes HTML-escaped in template (KD-40).
 
 ### PR-10 — Mobile: Drift schema, auth, project list
 
 - **Title:** `feat(mobile): Drift schema, secure login, project list`
-- **Files:** Drift tables (no UpdatePointLocal), secure storage, login UI, projects pull  
+- **Files:** Drift tables (no UpdatePointLocal, **no token columns** — KD-37), secure storage, login UI, projects pull  
 - **Dependencies:** PR-04, PR-05 (prefer contracts stable through PR-05+)  
 - **Effort:** 5 ed  
+- **Acceptance:** tokens only in Keychain/Keystore; login matches `Docs/Wireframes/01-login.md` (no forgot-password).  
 - **Note:** Do not parallelize against unstable project APIs before PR-05 merges.
 
 ### PR-11 — Mobile: GPS + capture + local persistence (1 photo)
@@ -1707,16 +1794,18 @@ Ordered, independently reviewable PRs. Effort is **engineer-days (ed)** rough fo
 ### PR-13 — Mobile: map + FMTC offline cache
 
 - **Title:** `feat(mobile): flutter_map markers and FMTC pre-cache`
-- **Files:** Map, boundary, download offline map, OSM attribution  
-- **Dependencies:** PR-10, PR-11 (not PR-12)  
+- **Files:** Map, boundary, download offline map, licensed-source attribution  
+- **Dependencies:** PR-10, PR-11 (not PR-12); **G-01 tile URL must be set before a device/pilot build**  
 - **Effort:** 4 ed  
+- **Acceptance:** no public-OSM bulk pre-cache in staging/prod (KD-35); category colors per wireframes (not status colors); no GNSS UI.
 
 ### PR-14 — Web: BFF auth, dashboard map, point editor
 
 - **Title:** `feat(web): cookie BFF auth, Leaflet map, editor`
-- **Files:** Next.js auth cookies, project overview, map filters, remarks/procedure/status forms, api-client  
+- **Files:** Next.js auth cookies, project overview, map filters, remarks/procedure/status forms, api-client, `/bff/photos/:id`  
 - **Dependencies:** PR-04–PR-08  
 - **Effort:** 6 ed  
+- **Acceptance:** HttpOnly cookies; media via BFF (KD-41); `note` read-only; remarks/procedure/status + version; legend = Defect/Normal/Note; matches `Docs/Wireframes/06-dashboard.md` and `07-point-editor.md`.
 
 ### PR-15 — Web: report list + PDF download UX
 
@@ -1724,6 +1813,7 @@ Ordered, independently reviewable PRs. Effort is **engineer-days (ed)** rough fo
 - **Files:** Export PDF, poll status, history  
 - **Dependencies:** PR-09, PR-14  
 - **Effort:** 2 ed  
+- **Acceptance:** 409 `REPORT_IN_PROGRESS` surfaced in UI; poll until ready/failed; download audited.
 
 ### PR-16 — Hardening: metrics, retention, e2e smoke, ops docs
 

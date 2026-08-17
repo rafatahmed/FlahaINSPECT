@@ -1,4 +1,6 @@
-**FlahaINSPCT System Schematics (Draft)**
+> **Non-normative.** Exploratory system sketch only. Design of record: [`FlahaINSPECT - Technical Design (MVP).md`](./FlahaINSPECT%20-%20Technical%20Design%20(MVP).md). Ignore stack alternatives here (Firebase, Firestore, Supabase Auth, OAuth, client comments, GNSS, notifications). Product name is **FlahaINSPECT**.
+
+**FlahaINSPECT System Schematics (Draft)**
 
 Here is a clear, practical draft of the full system architecture based on everything we discussed: offline-first mobile capture, high-accuracy GPS (phone + optional external GNSS), resumable photo uploads (TUS), offline map tiles, categorized points (Defect / Normal / Note), report generation, and editable dashboard.
 
@@ -8,7 +10,7 @@ Here is a clear, practical draft of the full system architecture based on everyt
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        FlahaINSPCT System                       │
+│                        FlahaINSPECT System                      │
 └─────────────────────────────────────────────────────────────────┘
 
           ┌──────────────────────┐

@@ -1,4 +1,6 @@
-**Offline sync is one of the most critical (and most frequently under-engineered) parts of FlahaINSPCT.** Farms and large landscape sites in Qatar often have intermittent or zero connectivity. If the app cannot fully capture high-resolution geotagged photos + GPS + categories offline and reliably deliver them later, field teams will abandon it.
+> **Non-normative.** Exploratory sync notes only. Design of record: [`FlahaINSPECT - Technical Design (MVP).md`](./FlahaINSPECT%20-%20Technical%20Design%20(MVP).md). Locked MVP: metadata-first outbox (`CreateInspectionPoint`, `UploadPhoto` only), keyset delta, TUS after register, **foreground + Sync Now** (WorkManager/BGTasks is post-MVP), SQLCipher is a pilot gate not a day-one requirement. Product name is **FlahaINSPECT**.
+
+**Offline sync is one of the most critical (and most frequently under-engineered) parts of FlahaINSPECT.** Farms and large landscape sites in Qatar often have intermittent or zero connectivity. If the app cannot fully capture high-resolution geotagged photos + GPS + categories offline and reliably deliver them later, field teams will abandon it.
 
 Here is a deep exploration of practical strategies tailored to your inspection workflow (mostly one-way capture of photos + structured data, occasional project metadata download, and later dashboard edits).
 
@@ -76,7 +78,7 @@ Practical strategies:
 
 Always store client UUID + server ID + timestamps/versions on every record.
 
-### 5. Recommended Architecture for FlahaINSPCT
+### 5. Recommended Architecture for FlahaINSPECT
 ```
 User action (photo + GPS + category)
         ↓
@@ -119,7 +121,7 @@ Sync Worker:
 3. **v1.1+** — Full resumable/chunked uploads, delta bidirectional sync, better conflict rules, offline maps, analytics on sync health.
 
 ### Summary Recommendation
-For FlahaINSPCT, start with an **offline-first outbox pattern + prioritized background push + resumable photo uploads**. This matches the real workflow (capture-heavy, report-later) while remaining robust on intermittent networks. Make the local write path extremely reliable and the sync path observable and resumable. Everything else (fancy CRDTs, real-time collaboration) can wait.
+For FlahaINSPECT, start with an **offline-first outbox pattern + prioritized background push + resumable photo uploads**. This matches the real workflow (capture-heavy, report-later) while remaining robust on intermittent networks. Make the local write path extremely reliable and the sync path observable and resumable. Everything else (fancy CRDTs, real-time collaboration) can wait.
 
 This approach is battle-tested in agricultural inspection, environmental monitoring, and construction field apps. Implement it well and field teams will trust the system; implement it poorly and they will go back to WhatsApp + paper.
 

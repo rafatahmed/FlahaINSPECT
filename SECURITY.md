@@ -8,9 +8,9 @@ FlahaINSPECT is under active design and early development. Security fixes apply 
 
 **Do not** open a public GitHub issue for security-sensitive findings (auth bypass, data exposure, injection, secret leakage, insecure photo/object storage access, etc.).
 
-Please report privately to the Flaha engineering maintainers responsible for this repository:
+Please report privately. **Do not** file a public GitHub issue.
 
-1. Email the security contact used by Flaha Agri Tech for engineering (or the repository owners on GitHub).
+1. Email **eng.rafatahmed@hotmail.com** (repository owner / Flaha engineering). Use the subject line `FlahaINSPECT security`.
 2. Include:
    - Description and impact
    - Reproduction steps or proof-of-concept (non-destructive)

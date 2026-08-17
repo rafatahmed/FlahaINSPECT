@@ -1,4 +1,6 @@
-**External GNSS receivers are a strong optional upgrade for FlahaINSPCT.** Phone GPS typically delivers 3–10 m accuracy (sometimes better with dual-frequency chips and clear sky, worse under canopy, near buildings, or with multipath). For precise defect/plant location, repeatable site visits, boundary mapping, or irrigation asset tracking on farms and landscapes, external Bluetooth GNSS receivers can improve this to sub-meter or even 1–2 cm with RTK corrections.
+> **Non-normative / post-MVP.** Exploratory GNSS notes only. Design of record: [`FlahaINSPECT - Technical Design (MVP).md`](./FlahaINSPECT%20-%20Technical%20Design%20(MVP).md). **KD-10: external GNSS is out of MVP.** Phone GPS + `accuracy_m` + pre-save pin adjust only. Do not implement NMEA, mock-location, or GNSS UI in PR-11/PR-13. Product name is **FlahaINSPECT**.
+
+**External GNSS receivers are a strong optional upgrade for FlahaINSPECT (v1.1+).** Phone GPS typically delivers 3–10 m accuracy (sometimes better with dual-frequency chips and clear sky, worse under canopy, near buildings, or with multipath). For precise defect/plant location, repeatable site visits, boundary mapping, or irrigation asset tracking on farms and landscapes, external Bluetooth GNSS receivers can improve this to sub-meter or even 1–2 cm with RTK corrections.
 
 Qatar’s open arid terrain generally provides excellent satellite visibility, making external GNSS particularly effective.
 
@@ -45,7 +47,7 @@ Prices range from roughly $200–600 for capable dual-frequency kits up to $1,00
 
 Open-sky farms in Qatar will achieve fast RTK fixes (often <10–30 seconds with multi-frequency receivers).
 
-### Integration Recommendations for FlahaINSPCT
+### Integration Recommendations for FlahaINSPECT
 1. **Detection & preference** — Prefer external GNSS when available and when its reported accuracy is better than the phone’s. Fall back gracefully to internal GPS.
 2. **Metadata capture** — Always store:
    - Source (phone / external model)
@@ -71,6 +73,6 @@ Open-sky farms in Qatar will achieve fast RTK fixes (often <10–30 seconds with
 - Battery life, Bluetooth range, and multipath near metal structures or dense vegetation still matter.
 - Cost and complexity rise with centimeter requirements — evaluate real project needs before mandating hardware.
 
-**Bottom line**: External GNSS receivers are mature, practical, and well-supported for field inspection apps. Implementing optional support (detection + richer metadata + preference for better accuracy) will future-proof FlahaINSPCT and differentiate it for precision work without complicating the basic phone-only workflow.
+**Bottom line**: External GNSS receivers are mature, practical, and well-supported for field inspection apps. Implementing optional support (detection + richer metadata + preference for better accuracy) will future-proof FlahaINSPECT and differentiate it for precision work without complicating the basic phone-only workflow.
 
 If you want deeper details on a specific model (Emlid Reach, Bad Elf, ArduSimple, etc.), NTRIP setup in Qatar, sample Flutter/React Native code for NMEA or mock location, or a comparison table focused on cost vs accuracy for landscape use, let me know.

@@ -1,4 +1,6 @@
-**Offline map tile caching is essential for FlahaINSPCT.** Inspectors need to see the project boundary, their live GPS position, previously captured points (color-coded Defect/Normal/Note), and the inspection path even when there is no signal on a remote farm or landscape site in Qatar.
+> **Non-normative.** Exploratory map-cache notes only. Design of record: [`FlahaINSPECT - Technical Design (MVP).md`](./FlahaINSPECT%20-%20Technical%20Design%20(MVP).md). Locked: flutter_map + FMTC; **production/pilot field tiles require a contracted or self-hosted source (KD-35)** — do not bulk-scrape OSM in production. Path tracking overlays are out of MVP. Product name is **FlahaINSPECT**.
+
+**Offline map tile caching is essential for FlahaINSPECT.** Inspectors need to see the project boundary, their live GPS position, previously captured points (color-coded Defect/Normal/Note), and the inspection path even when there is no signal on a remote farm or landscape site in Qatar.
 
 Map tiles are small square images (or vector data) served at different zoom levels. Without caching, the map goes blank offline. Proper caching makes the map fully usable while keeping storage and data usage under control.
 
@@ -11,7 +13,7 @@ Map tiles are small square images (or vector data) served at different zoom leve
   - **Bulk/pre-download**: Download a defined region (project boundary + buffer) ahead of time.
   - **Packaged (MBTiles)**: Single-file archives that can be generated server-side or downloaded.
 
-### Recommended Strategies for FlahaINSPCT
+### Recommended Strategies for FlahaINSPECT
 
 **1. Project-based pre-caching (primary strategy)**  
 When a user selects or downloads a project (while on good Wi-Fi/cellular):
@@ -90,7 +92,7 @@ Project selected / “Prepare offline”
 - **Satellite vs streets**: For Flaha landscape/plant inspection, hybrid or satellite base layers are more useful than pure road maps. Test visual clarity for irrigation lines, plant health, etc.
 - **Testing**: Simulate airplane mode after downloading a real project boundary. Verify markers, boundaries, and location still render.
 
-### Practical Recommendation for FlahaINSPCT
+### Practical Recommendation for FlahaINSPECT
 Start with **project-boundary bulk download + ambient caching + local vector overlays**.  
 Use a library that supports defined regions with progress (MapLibre OfflineManager, FMTC, or Mapbox). Prefer vector tiles for storage efficiency. Make offline map preparation an explicit step when the inspector selects a project (or auto-trigger on Wi-Fi after project assignment).
 
