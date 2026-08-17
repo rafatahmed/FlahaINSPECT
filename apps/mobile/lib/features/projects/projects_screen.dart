@@ -3,6 +3,7 @@ import 'package:flaha_inspect/data/map_repository.dart';
 import 'package:flaha_inspect/data/project_repository.dart';
 import 'package:flaha_inspect/features/map/map_screen.dart';
 import 'package:flaha_inspect/features/projects/project_home.dart';
+import 'package:flaha_inspect/map/offline_pack.dart';
 import 'package:flaha_inspect/map/tile_policy.dart';
 import 'package:flutter/material.dart';
 
@@ -16,6 +17,7 @@ class ProjectsScreen extends StatefulWidget {
     this.capture,
     this.maps,
     this.tiles,
+    this.packs,
   });
 
   final ProjectCatalog projects;
@@ -25,6 +27,7 @@ class ProjectsScreen extends StatefulWidget {
   final CaptureBindings? capture;
   final MapRepository? maps;
   final TilePolicy? tiles;
+  final OfflinePacks? packs;
 
   @override
   State<ProjectsScreen> createState() => _ProjectsScreenState();
@@ -113,6 +116,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                       capture: widget.capture,
                       maps: widget.maps,
                       tiles: widget.tiles,
+                      packs: widget.packs,
                     ),
                   ),
                 );
@@ -126,11 +130,12 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 }
 
 class _ProjectTile extends StatelessWidget {
-  const _ProjectTile({required this.item, this.capture, this.maps, this.tiles});
+  const _ProjectTile({required this.item, this.capture, this.maps, this.tiles, this.packs});
   final ProjectListItem item;
   final CaptureBindings? capture;
   final MapRepository? maps;
   final TilePolicy? tiles;
+  final OfflinePacks? packs;
 
   @override
   Widget build(BuildContext context) {
@@ -150,6 +155,7 @@ class _ProjectTile extends StatelessWidget {
                           bindings: capture!,
                           maps: maps!,
                           tiles: tiles!,
+                          packs: packs,
                         )
                       : capture == null
                           ? Scaffold(

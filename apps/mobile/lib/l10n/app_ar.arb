@@ -30,5 +30,9 @@
   "categoryNormal": "طبيعي",
   "categoryNote": "ملاحظة",
   "gpsWaiting": "GPS —",
-  "noteTooLong": "يجب ألا تتجاوز الملاحظات 4000 حرف."
+  "noteTooLong": "يجب ألا تتجاوز الملاحظات 4000 حرف.",
+  "downloadMap": "تنزيل الخريطة",
+  "deleteCache": "حذف الذاكرة المؤقتة",
+  "downloadingMap": "جارٍ تنزيل الخريطة…",
+  "packReady": "الخريطة دون اتصال جاهزة"
 }

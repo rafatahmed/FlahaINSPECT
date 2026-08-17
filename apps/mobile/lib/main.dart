@@ -5,6 +5,7 @@ import 'package:flaha_inspect/data/auth_repository.dart';
 import 'package:flaha_inspect/data/capture_repository.dart';
 import 'package:flaha_inspect/data/map_repository.dart';
 import 'package:flaha_inspect/data/project_repository.dart';
+import 'package:flaha_inspect/map/file_offline_packs.dart';
 import 'package:flaha_inspect/map/tile_policy.dart';
 import 'package:flaha_inspect/db/app_database.dart';
 import 'package:flaha_inspect/features/projects/project_home.dart';
@@ -61,6 +62,7 @@ void main() {
       ),
       maps: MapRepository(db),
       tiles: tiles,
+      packs: FileOfflinePacks(),
     ),
   );
 }

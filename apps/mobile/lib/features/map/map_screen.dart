@@ -7,8 +7,12 @@ import 'package:flaha_inspect/data/map_repository.dart';
 import 'package:flaha_inspect/features/capture/capture_screen.dart';
 import 'package:flaha_inspect/features/projects/project_home.dart';
 import 'package:flaha_inspect/features/sync/sync_screen.dart';
+import 'package:flaha_inspect/features/map/offline_pack_bar.dart';
 import 'package:flaha_inspect/map/category_style.dart';
 import 'package:flaha_inspect/map/geojson.dart';
+import 'package:flaha_inspect/map/map_copy.dart';
+import 'package:flaha_inspect/map/offline_pack.dart';
+import 'package:flaha_inspect/map/pack_tile_provider.dart';
 import 'package:flaha_inspect/map/tile_policy.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -21,12 +25,14 @@ class MapScreen extends StatefulWidget {
     required this.bindings,
     required this.maps,
     required this.tiles,
+    this.packs,
   });
 
   final String projectId;
   final CaptureBindings bindings;
   final MapRepository maps;
   final TilePolicy tiles;
+  final OfflinePacks? packs;
 
   @override
   State<MapScreen> createState() => _MapScreenState();
@@ -38,6 +44,11 @@ class _MapScreenState extends State<MapScreen> {
   MapProject? _project;
   GeoFix? _me;
   var _storage = StorageVerdict.ok;
+  var _hasPack = false;
+  var _packBusy = false;
+  PackProgress? _packProgress;
+  String? _packRoot;
+  String? _packError;
 
   @override
   void initState() {
@@ -50,12 +61,65 @@ class _MapScreenState extends State<MapScreen> {
     final markers = await widget.maps.markers(widget.projectId);
     final me = await widget.bindings.location.acquire();
     final free = await widget.bindings.disk.freeBytes();
+    final has = widget.packs == null ? false : await widget.packs!.hasPack(widget.projectId);
+    final root = widget.packs == null ? null : await widget.packs!.packRoot(widget.projectId);
     if (!mounted) return;
     setState(() {
       _project = project;
       _markers = markers;
       _me = me;
       _storage = storageVerdict(free);
+      _hasPack = has;
+      _packRoot = root;
+    });
+  }
+
+  Future<void> _downloadPack() async {
+    final packs = widget.packs;
+    if (packs == null || _packBusy) return;
+    if (_storage == StorageVerdict.block) return;
+    final ring = polygonRing(_project?.boundaryGeojson);
+    final area = ring.isNotEmpty
+        ? [for (final p in ring) (latitude: p.latitude, longitude: p.longitude)]
+        : [for (final m in _markers) (latitude: m.latitude, longitude: m.longitude)];
+    if (area.isEmpty && _me != null) {
+      area.add((latitude: _me!.latitude, longitude: _me!.longitude));
+    }
+    if (area.isEmpty) {
+      setState(() => _packError = noAreaToDownload);
+      return;
+    }
+    setState(() {
+      _packBusy = true;
+      _packError = null;
+    });
+    final ok = await packs.download(
+      projectId: widget.projectId,
+      tiles: widget.tiles,
+      area: area,
+      onProgress: (p) {
+        if (mounted) setState(() => _packProgress = p);
+      },
+    );
+    final root = await packs.packRoot(widget.projectId);
+    if (!mounted) return;
+    setState(() {
+      _packBusy = false;
+      _hasPack = ok;
+      _packRoot = root;
+      if (!ok) _packError = noAreaToDownload;
+    });
+  }
+
+  Future<void> _deletePack() async {
+    final packs = widget.packs;
+    if (packs == null || _packBusy) return;
+    await packs.delete(widget.projectId);
+    if (!mounted) return;
+    setState(() {
+      _hasPack = false;
+      _packRoot = null;
+      _packProgress = null;
     });
   }
 
@@ -100,10 +164,11 @@ class _MapScreenState extends State<MapScreen> {
                 FlutterMap(
                   options: MapOptions(initialCenter: center, initialZoom: 14),
                   children: [
-                    if (widget.tiles.tilesAvailable)
+                    if (widget.tiles.tilesAvailable || _hasPack)
                       TileLayer(
                         urlTemplate: widget.tiles.urlTemplate,
                         userAgentPackageName: widget.tiles.userAgent,
+                        tileProvider: PackAwareTileProvider(packRoot: _packRoot),
                       )
                     else
                       const ColoredBox(color: Color(0xFFCFD8DC)),
@@ -163,10 +228,10 @@ class _MapScreenState extends State<MapScreen> {
                     SimpleAttributionWidget(source: Text(widget.tiles.attribution)),
                   ],
                 ),
-                if (!widget.tiles.tilesAvailable)
+                if (!widget.tiles.tilesAvailable && !_hasPack)
                   const Align(
                     alignment: Alignment.center,
-                    child: Text('Map tiles unavailable offline'),
+                    child: Text(tilesUnavailable),
                   ),
               ],
             ),
@@ -187,13 +252,20 @@ class _MapScreenState extends State<MapScreen> {
                       ),
                   ],
                 ),
-                if (!widget.tiles.allowBulkDownload)
-                  Text(
-                    widget.tiles.usesPublicOsm
-                        ? 'OSM ambient cache only — no bulk download (KD-35)'
-                        : 'Set TILE_PROVIDER_URL (G-01) before offline packs',
-                    textAlign: TextAlign.center,
+                if (widget.packs != null)
+                  OfflinePackBar(
+                    tiles: widget.tiles,
+                    hasPack: _hasPack,
+                    busy: _packBusy,
+                    progress: _packProgress,
+                    onDownload: () {
+                      _downloadPack();
+                    },
+                    onDelete: () {
+                      _deletePack();
+                    },
                   ),
+                if (_packError != null) Text(_packError!, textAlign: TextAlign.center),
                 FilledButton(
                   onPressed: captureBlocked
                       ? null
