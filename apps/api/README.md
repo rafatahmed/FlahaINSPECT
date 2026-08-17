@@ -4,7 +4,7 @@ NestJS HTTP API.
 
 - `GET /health` — process liveness
 - `GET /health/ready` — Postgres TCP + MinIO live (503 if compose is down)
-- `POST /internal/tus` — tusd hook stub (shared secret; real finalize is PR-07)
+- `POST /internal/tus` — tusd hooks (`pre-create` / `post-create` / `post-finish`; shared secret)
 
 Schema (PR-03): raw SQL in `drizzle/0001_init.sql`, Drizzle mirror in `src/db/schema.ts`.
 
@@ -24,6 +24,8 @@ Auth (PR-04), all under `/v1/auth`:
 Users (manager, `/v1/users`): list, create, patch (role change bumps `token_version`).
 
 Projects (`/v1/projects`): inspectors see assigned only; managers see all non-deleted. Archive vs soft-delete. Membership stores `member_role` but AuthZ ignores it (KD-33).
+
+Photos (`/v1/photos`): register metadata + TUS `upload_token` (2h). Re-issue keeps `tus_upload_id` on same hash (KD-34). Hooks at `/internal/tus` finalize and enqueue `generate_thumbnail`.
 
 OpenAPI: `openapi/flaha-inspect-v1.yaml`.
 

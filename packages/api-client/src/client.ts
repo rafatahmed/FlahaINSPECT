@@ -119,6 +119,9 @@ export function createInspectClient(options: InspectClientOptions) {
       request<{ point: unknown }>('PATCH', `/inspection-points/${id}`, body),
     deleteInspectionPoint: (id: string) =>
       request<{ ok: true }>('DELETE', `/inspection-points/${id}`),
+    registerPhoto: (body: Record<string, unknown>) =>
+      request<{ photo: unknown }>('POST', '/photos', body),
+    getPhoto: (id: string) => request<{ photo: unknown }>('GET', `/photos/${id}`),
   };
 }
 
