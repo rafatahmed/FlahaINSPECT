@@ -103,6 +103,11 @@ if (Test-Path $cfg) {
   $text = Get-Content $cfg -Raw
   $text = $text -replace 'disk.dataPartition.size\s*=\s*.+', 'disk.dataPartition.size = 2G'
   $text = $text -replace 'sdcard.size\s*=\s*.+', 'sdcard.size = 128 MB'
+  $text = $text -replace 'hw.ramSize\s*=\s*.+', 'hw.ramSize = 1024'
+  $text = $text -replace 'hw.cpu.ncore\s*=\s*.+', 'hw.cpu.ncore = 2'
+  $text = $text -replace 'hw.lcd.height\s*=\s*.+', 'hw.lcd.height = 1280'
+  $text = $text -replace 'hw.lcd.width\s*=\s*.+', 'hw.lcd.width = 720'
+  $text = $text -replace 'hw.lcd.density\s*=\s*.+', 'hw.lcd.density = 320'
   Set-Content -Path $cfg -Value $text -NoNewline
 }
 if (-not (Test-Path $avdIni)) {
