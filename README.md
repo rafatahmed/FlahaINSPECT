@@ -13,7 +13,7 @@ Field inspectors capture geotagged photos with a single category (**Defect** / *
 | Item | State |
 |------|--------|
 | Product name | **FlahaINSPECT** |
-| Repository | Monorepo scaffold on `chore/pr-01-monorepo-scaffold` (R1-01) |
+| Repository | R1 in progress — R1-01 merged, R1-02 Compose on `infra/pr-02-compose` |
 | Current release | **R1 in progress** — R0 tag `r0-design-freeze` |
 | Design of record | [`Docs/FlahaINSPECT - Technical Design (MVP).md`](Docs/FlahaINSPECT%20-%20Technical%20Design%20(MVP).md) |
 | Plan / tracking | [`Docs/ROADMAP.md`](Docs/ROADMAP.md) |
@@ -46,7 +46,7 @@ FlahaINSPECT/
     mobile/              # Flutter sibling — NOT in pnpm/turbo
   packages/
     api-client/          # @flaha/inspect-api-client (codegen from PR-05)
-  infra/                 # docker-compose in PR-02
+  infra/                 # docker-compose: PostGIS, private MinIO, tusd, api, worker
   Docs/
   openapi/
   Makefile
@@ -93,7 +93,7 @@ This repo is set up for a secure monorepo baseline:
 1. Read the [Roadmap](Docs/ROADMAP.md) then the [Technical Design (MVP)](Docs/FlahaINSPECT%20-%20Technical%20Design%20(MVP).md).
 2. Node **20+** and **pnpm 9** (`corepack enable` then `corepack prepare pnpm@9.15.9 --activate`, or `corepack pnpm`).
 3. Flutter SDK only if you work in `apps/mobile` — see [apps/mobile/README.md](apps/mobile/README.md).
-4. Keep secrets out of git. `.env.example` arrives with PR-02.
+4. Keep secrets out of git. Copy `.env.example` → `.env` and change the dev placeholders.
 
 ```bash
 corepack pnpm install
@@ -105,14 +105,17 @@ corepack pnpm build
 # or
 make install lint test typecheck build
 
-corepack pnpm --filter @flaha/inspect-api dev     # :3001/health
+cp .env.example .env
+make up          # PostGIS, private MinIO, tusd, api, worker
+make smoke       # /health and /health/ready
+make down
+
+corepack pnpm --filter @flaha/inspect-api dev     # :3001/health (host, no compose)
 corepack pnpm --filter @flaha/inspect-web dev     # :3000
 corepack pnpm --filter @flaha/inspect-worker dev
 
 # mobile (Flutter CLI; not turbo)
 make mobile-get mobile-analyze mobile-test
-
-# make up   # PR-02 — docker compose not in this PR
 ```
 
 ---

@@ -1,8 +1,12 @@
 # `@flaha/inspect-api`
 
-NestJS HTTP API. PR-01 is a compile/test skeleton (`GET /health` only).
+NestJS HTTP API.
 
-Auth, schema, and domain modules start in PR-03 / PR-04.
+- `GET /health` — process liveness
+- `GET /health/ready` — Postgres TCP + MinIO live (503 if compose is down)
+- `POST /internal/tus` — tusd hook stub (shared secret; real finalize is PR-07)
+
+Auth and schema start in PR-03 / PR-04.
 
 ```bash
 corepack pnpm --filter @flaha/inspect-api dev

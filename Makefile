@@ -1,15 +1,16 @@
 # FlahaINSPECT — developer entry points.
 # Node workspaces: pnpm + Turborepo.
 # Mobile: Flutter CLI only (not a turbo package).
-# `make up` / compose is PR-02.
 
 PNPM ?= corepack pnpm
 MOBILE := apps/mobile
+COMPOSE_ENV := $(if $(wildcard .env),.env,.env.example)
+COMPOSE := docker compose -f infra/docker-compose.yml --env-file $(COMPOSE_ENV)
 
 .PHONY: help install lint test typecheck build \
 	api-dev web-dev worker-dev dev \
 	mobile-get mobile-analyze mobile-test mobile-run \
-	up down
+	up down logs ps smoke
 
 help:
 	@echo "FlahaINSPECT targets"
@@ -17,7 +18,7 @@ help:
 	@echo "  make lint test typecheck build"
 	@echo "  make api-dev | web-dev | worker-dev | dev"
 	@echo "  make mobile-get | mobile-analyze | mobile-test | mobile-run"
-	@echo "  make up | down       PR-02 (docker compose) — not in this PR"
+	@echo "  make up | down | logs | ps | smoke"
 
 install:
 	$(PNPM) install
@@ -27,6 +28,7 @@ lint:
 
 test:
 	$(PNPM) test
+	$(PNPM) run test:infra
 
 typecheck:
 	$(PNPM) typecheck
@@ -59,9 +61,18 @@ mobile-run:
 	cd $(MOBILE) && flutter run
 
 up:
-	@echo "PR-02: docker compose is not in this PR. See Docs/ROADMAP.md R1-02."
-	@exit 1
+	$(COMPOSE) up -d --build
 
 down:
-	@echo "PR-02: docker compose is not in this PR."
-	@exit 1
+	$(COMPOSE) down
+
+logs:
+	$(COMPOSE) logs -f --tail=200
+
+ps:
+	$(COMPOSE) ps
+
+smoke:
+	$(COMPOSE) ps
+	curl -sf http://127.0.0.1:3001/health
+	curl -sf http://127.0.0.1:3001/health/ready

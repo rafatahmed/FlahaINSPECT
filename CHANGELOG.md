@@ -14,10 +14,14 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
-- Monorepo scaffold (PR-01 / R1-01): pnpm workspaces + Turborepo for `apps/api`, `apps/web`, `apps/worker`, `packages/api-client`.
-- Flutter sibling at `apps/mobile` (`com.flaha.inspect`) — documented as **not** a turbo/pnpm package.
-- GitHub Actions CI: Node lint/typecheck/test/build; separate Flutter analyze/test job.
-- Makefile entry points; `GET /health` on the API stub.
+- Local Compose stack (PR-02 / R1-02): PostGIS 16, private MinIO bucket, tusd, api, worker. No Redis.
+- `.env.example` with `TILE_PROVIDER_URL` (KD-35) and `TUSD_HOOK_SECRET`.
+- API `GET /health/ready` (db + storage) and stub `POST /internal/tus` hooks (secret required).
+- CI compose smoke job; infra contract tests (no hook host port, private bucket, no Redis).
+
+### Changed
+
+- R1-01 marked **done** after merge of PR #13.
 
 ---
 
