@@ -10,7 +10,7 @@ COMPOSE := docker compose -f infra/docker-compose.yml --env-file $(COMPOSE_ENV)
 .PHONY: help install lint test typecheck build \
 	api-dev web-dev worker-dev dev \
 	mobile-get mobile-analyze mobile-test mobile-run \
-	up down logs ps smoke
+	up down logs ps smoke migrate migrate-twice seed
 
 help:
 	@echo "FlahaINSPECT targets"
@@ -19,6 +19,7 @@ help:
 	@echo "  make api-dev | web-dev | worker-dev | dev"
 	@echo "  make mobile-get | mobile-analyze | mobile-test | mobile-run"
 	@echo "  make up | down | logs | ps | smoke"
+	@echo "  make migrate | migrate-twice | seed"
 
 install:
 	$(PNPM) install
@@ -76,3 +77,12 @@ smoke:
 	$(COMPOSE) ps
 	curl -sf http://127.0.0.1:3001/health
 	curl -sf http://127.0.0.1:3001/health/ready
+
+migrate:
+	$(PNPM) --filter @flaha/inspect-api db:migrate
+
+migrate-twice:
+	$(PNPM) --filter @flaha/inspect-api db:migrate:twice
+
+seed:
+	$(PNPM) --filter @flaha/inspect-api db:seed

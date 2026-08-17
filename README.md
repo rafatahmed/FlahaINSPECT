@@ -13,7 +13,7 @@ Field inspectors capture geotagged photos with a single category (**Defect** / *
 | Item | State |
 |------|--------|
 | Product name | **FlahaINSPECT** |
-| Repository | R1 in progress — R1-01 merged, R1-02 Compose on `infra/pr-02-compose` |
+| Repository | R1 in progress — R1-01/R1-02 merged; R1-03 schema on `feat/pr-03-schema` |
 | Current release | **R1 in progress** — R0 tag `r0-design-freeze` |
 | Design of record | [`Docs/FlahaINSPECT - Technical Design (MVP).md`](Docs/FlahaINSPECT%20-%20Technical%20Design%20(MVP).md) |
 | Plan / tracking | [`Docs/ROADMAP.md`](Docs/ROADMAP.md) |
@@ -108,6 +108,8 @@ make install lint test typecheck build
 cp .env.example .env
 make up          # PostGIS, private MinIO, tusd, api, worker
 make smoke       # /health and /health/ready
+make migrate-twice
+SEED_PASSWORD=dev-seed-only-change-me make seed
 make down
 
 corepack pnpm --filter @flaha/inspect-api dev     # :3001/health (host, no compose)
