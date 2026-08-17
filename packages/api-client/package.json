@@ -2,7 +2,7 @@
   "name": "@flaha/inspect-api-client",
   "version": "0.0.0",
   "private": true,
-  "description": "OpenAPI-generated TypeScript client (hand stub until PR-05 codegen)",
+  "description": "Typed FlahaINSPECT API client (hand-written from openapi/flaha-inspect-v1.yaml)",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {

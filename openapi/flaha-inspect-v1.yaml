@@ -10,6 +10,8 @@ servers:
     description: Versioned API
 tags:
   - name: Auth
+  - name: Users
+  - name: Projects
 paths:
   /auth/login:
     post:
@@ -115,6 +117,161 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /users:
+    get:
+      operationId: listUsers
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      summary: List users (manager)
+      responses:
+        '200':
+          description: User list
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      operationId: createUser
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      summary: Create inspector or manager
+      responses:
+        '201':
+          description: Created
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /users/{id}:
+    patch:
+      operationId: patchUser
+      tags: [Users]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      summary: Patch name/role/active (role change bumps token_version)
+      responses:
+        '200':
+          description: Updated
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      summary: List assigned projects (inspectors) or all (managers)
+      parameters:
+        - in: query
+          name: archived
+          schema: { type: string, enum: [false] }
+      responses:
+        '200':
+          description: Project list
+    post:
+      operationId: createProject
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      summary: Create project (manager); boundary computes bbox
+      responses:
+        '201':
+          description: Created
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Project + members
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      operationId: patchProject
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Updated
+    delete:
+      operationId: deleteProject
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      summary: Soft-delete
+      responses:
+        '200':
+          description: Soft-deleted
+  /projects/{id}/archive:
+    post:
+      operationId: archiveProject
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Archived
+  /projects/{id}/members:
+    post:
+      operationId: addProjectMember
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      summary: Assign a user (member_role stored, unused for AuthZ)
+      responses:
+        '200':
+          description: Membership upserted
+  /projects/{id}/members/{userId}:
+    delete:
+      operationId: removeProjectMember
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: userId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Removed
+  /projects/{id}/stats:
+    get:
+      operationId: getProjectStats
+      tags: [Projects]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Counts
 components:
   securitySchemes:
     bearerAuth:
