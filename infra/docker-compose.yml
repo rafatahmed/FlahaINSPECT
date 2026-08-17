@@ -167,7 +167,7 @@ services:
       TUSD_INCOMPLETE_HOURS: ${TUSD_INCOMPLETE_HOURS:-48}
     networks: [flaha]
 
-  # G-01 / KD-43. Opt-in: docker compose --profile tiles
+  # G-01 / KD-43. Flaha Agri Tech owned TileServer. Opt-in: --profile tiles
   # Needs infra/tiles/data/qatar.mbtiles (make tiles-prepare). Not public OSM.
   tiles:
     profiles: [tiles]

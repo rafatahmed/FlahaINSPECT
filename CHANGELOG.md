@@ -14,6 +14,8 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- TileServer GL ops: [Docs/ops/tileserver-gl.md](Docs/ops/tileserver-gl.md) — Flaha Agri Tech owns the service and operational Qatar pack; OSM geometry remains ODbL.
+
 - G-01 **decided** (KD-43): self-hosted TileServer GL + Qatar extract (`infra/tiles/`, compose profile `tiles`). Not public OSM. Unblocks R2-13.
 
 - G-01 decision brief: [Docs/G-01-tile-source.md](Docs/G-01-tile-source.md).

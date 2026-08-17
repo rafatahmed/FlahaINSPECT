@@ -7,6 +7,8 @@
 
 **Decision (2026-08-17):** option **8** — self-hosted TileServer GL + Qatar extract (**KD-43**). This file keeps the rejected alternatives and the closure form.
 
+**Operator:** Flaha Agri Tech owns the TileServer process, `qatar.mbtiles` pack, and `TILE_PROVIDER_URL`. OSM street geometry inside the extract stays ODbL (attribute, do not claim copyright). Details: [ops/tileserver-gl.md](./ops/tileserver-gl.md).
+
 Design of record: [Technical Design (MVP)](./FlahaINSPECT%20-%20Technical%20Design%20(MVP).md) Maps Design + KD-9 + KD-35.  
 Policy already locked: [GAPS.md](./GAPS.md) R0-05 / KD-35.  
 UX of record: [Wireframes/03-map.md](./Wireframes/03-map.md).  
