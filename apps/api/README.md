@@ -4,6 +4,7 @@ NestJS HTTP API.
 
 - `GET /health` — process liveness
 - `GET /health/ready` — Postgres TCP + MinIO live (503 if compose is down)
+- `GET /metrics` — Prometheus text (HTTP, TUS, lag, job gauges)
 - `POST /internal/tus` — tusd hooks (`pre-create` / `post-create` / `post-finish`; shared secret)
 
 Schema (PR-03): raw SQL in `drizzle/0001_init.sql`, Drizzle mirror in `src/db/schema.ts`.

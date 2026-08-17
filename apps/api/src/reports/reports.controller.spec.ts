@@ -14,6 +14,13 @@ describe('reports routes', () => {
     expect(svc).toContain('report.download');
   });
 
+  it('allows optional title (whitelist + forbidNonWhitelisted)', () => {
+    const dto = readFileSync(join(__dirname, 'reports.dto.ts'), 'utf8');
+    expect(dto).toContain('@IsOptional()');
+    expect(dto).toContain('@IsString()');
+    expect(dto).toContain('title');
+  });
+
   it('imports AuthModule so JwtAuthGuard can resolve AUTH_STORE', () => {
     const mod = readFileSync(join(__dirname, 'reports.module.ts'), 'utf8');
     expect(mod).toContain('AuthModule');

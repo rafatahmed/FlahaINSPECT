@@ -20,6 +20,9 @@ export class ReportsService {
     if (!canGenerateReport(actor.role)) {
       throw new ApiException(ErrorCode.FORBIDDEN);
     }
+    if (process.env.PDF_ENABLED === 'false') {
+      throw new ApiException(ErrorCode.FORBIDDEN, undefined, 'pdf disabled');
+    }
     const project = await this.loadProject(projectId);
     const access = projectAccess(actor, project, await this.isMember(actor.id, projectId));
     if (access === 'not_found') throw new ApiException(ErrorCode.NOT_FOUND);

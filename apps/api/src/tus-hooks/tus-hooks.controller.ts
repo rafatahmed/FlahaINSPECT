@@ -1,6 +1,7 @@
 import { Body, Controller, Headers, Param, Post, Query } from '@nestjs/common';
 import { ApiException } from '../common/api-exception';
 import { ErrorCode } from '../common/errors';
+import { recordTus } from '../metrics/registry';
 import { PhotosService, type TusHookBody } from '../photos/photos.service';
 
 @Controller('internal/tus')
@@ -41,12 +42,28 @@ export class TusHooksController {
   ) {
     const name = (event ?? '').toLowerCase();
     if (name === 'pre-create' || name === 'post-create') {
-      return this.photos.preCreate({ authorization, 'upload-length': uploadLength }, body);
+      return this.withTusMetric('pre_create', () =>
+        this.photos.preCreate({ authorization, 'upload-length': uploadLength }, body),
+      );
     }
     if (name === 'post-finish') {
-      return this.photos.postFinish(body);
+      return this.withTusMetric('post_finish', () => this.photos.postFinish(body));
     }
     return { ok: true, event: name || 'unknown' };
+  }
+
+  private async withTusMetric<T>(
+    hook: 'pre_create' | 'post_finish',
+    fn: () => T | Promise<T>,
+  ): Promise<T> {
+    try {
+      const result = await fn();
+      recordTus(hook, 'ok');
+      return result;
+    } catch (err) {
+      recordTus(hook, 'error');
+      throw err;
+    }
   }
 
   private assertSecret(

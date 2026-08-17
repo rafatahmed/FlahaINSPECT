@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { DbModule } from './db/db.module';
 import { HealthModule } from './health/health.module';
+import { MetricsModule } from './metrics/metrics.module';
 import { InspectionPointsModule } from './inspection-points/inspection-points.module';
 import { PhotosModule } from './photos/photos.module';
 import { ProjectsModule } from './projects/projects.module';
@@ -16,6 +17,7 @@ import { UsersModule } from './users/users.module';
     DbModule,
     StorageModule,
     HealthModule,
+    MetricsModule,
     AuthModule,
     UsersModule,
     ProjectsModule,

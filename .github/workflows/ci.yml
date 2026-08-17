@@ -102,6 +102,12 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm --filter @flaha/inspect-api db:migrate:twice
           pnpm --filter @flaha/inspect-api db:seed
+      - name: Pilot e2e login point tus list PDF
+        env:
+          API_BASE: http://127.0.0.1:3001
+          TUSD_URL: http://127.0.0.1:1080/files/
+          SEED_PASSWORD: ci-seed-password-only
+        run: node infra/e2e/pilot-smoke.mjs
       - name: Hooks are not a host port
         run: |
           published="$(docker compose -f infra/docker-compose.yml --env-file .env ps --format json)"

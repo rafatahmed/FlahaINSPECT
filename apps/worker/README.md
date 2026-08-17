@@ -2,7 +2,7 @@
 
 Separate Node process for durable jobs (thumbnails, PDF, orphan GC).
 
-PR-01 starts an application context only. Claim/lease SQL arrives with PR-07 / PR-09.
+Claims `generate_thumbnail`, `generate_report`, and daily `gc_orphan_object` (48h unreferenced objects; G-05 archive default 12 months).
 
 ```bash
 corepack pnpm --filter @flaha/inspect-worker dev

@@ -7,6 +7,7 @@ import type { Db } from '../db/client';
 import { inspectionPoints, photos, projectMembers, projects } from '../db/schema';
 import { projectAccess } from '../projects/project-access';
 import { StorageService } from '../storage/storage.service';
+import { recordSyncLag } from '../metrics/registry';
 import { allowlistDeviceInfo, fieldPayloadEqual } from './field-payload';
 
 @Injectable()
@@ -66,6 +67,7 @@ export class InspectionPointsService {
 
     const newId = firstId(inserted);
     if (newId) {
+      recordSyncLag((Date.now() - capturedAt.getTime()) / 1000);
       return { status: 201 as const, point: await this.loadPublic(newId) };
     }
 

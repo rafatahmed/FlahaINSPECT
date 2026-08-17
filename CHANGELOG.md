@@ -14,6 +14,8 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- Hardening (PR-16 / R2-16): `GET /metrics` (HTTP, TUS, lag, job gauges); daily `gc_orphan_object` (48h orphans, G-05 12-month archive default); compose e2e login→point→tus→list→PDF; [Docs/ops/pilot-checklist.md](Docs/ops/pilot-checklist.md).
+
 - Web report UX (PR-15 / R2-15): Generate PDF, poll until ready/failed, 409 in-progress banner, download via `/bff/reports/:id/file`.
 
 - Reports + Puppeteer worker (PR-09 / R2-09): manager `POST /projects/:id/reports` (202); KD-39 `409 REPORT_IN_PROGRESS`; 200-point cap; 15m job lease + reclaim; notes HTML-escaped; PDF key `reports/{project}/{id}.pdf`.

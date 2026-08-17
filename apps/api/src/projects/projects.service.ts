@@ -103,7 +103,10 @@ export class ProjectsService {
   async archive(actor: AuthUser, id: string) {
     this.assertManager(actor);
     await this.requireProject(actor, id);
-    await this.db.update(projects).set({ isArchived: true }).where(eq(projects.id, id));
+    await this.db
+      .update(projects)
+      .set({ isArchived: true, updatedAt: new Date() })
+      .where(eq(projects.id, id));
     return { project: await this.reloadPublic(id) };
   }
 

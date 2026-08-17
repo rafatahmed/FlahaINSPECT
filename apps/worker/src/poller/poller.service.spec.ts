@@ -16,6 +16,7 @@ describe('PollerService', () => {
     const { join } = await import('node:path');
     const src = readFileSync(join(__dirname, 'poller.service.ts'), 'utf8');
     expect(src).toContain('generate_report');
+    expect(src).toContain('gc_orphan_object');
     expect(src).toContain('reclaimExpiredLeases');
     expect(src).toContain('handleReport');
     expect(src).toContain('42P01');
