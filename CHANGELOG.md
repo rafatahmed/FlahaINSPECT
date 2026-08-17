@@ -14,6 +14,10 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- Mobile map (PR-13 / R1-13): flutter_map, category markers, tile policy (KD-35 / G-01). Public OSM is ambient-only; bulk download requires `TILE_PROVIDER_URL`.
+
+### Added (earlier)
+
 - Outbox sync + TUS (PR-12 / R1-12): Sync now, Wi-Fi only, 2 MiB resumable PATCH, backoff, keyset pull after push.
 
 ### Added (earlier)
@@ -71,6 +75,7 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 - R1-08 marked **done** after merge of PR #20.
 - R1-10 marked **done** after merge of PR #21.
 - R1-11 marked **done** after merge of PR #22.
+- R1-12 marked **done** after merge of PR #23.
 
 ---
 

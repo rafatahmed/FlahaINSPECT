@@ -3,7 +3,9 @@ import 'package:flaha_inspect/app.dart';
 import 'package:flaha_inspect/auth/secure_session_store.dart';
 import 'package:flaha_inspect/data/auth_repository.dart';
 import 'package:flaha_inspect/data/capture_repository.dart';
+import 'package:flaha_inspect/data/map_repository.dart';
 import 'package:flaha_inspect/data/project_repository.dart';
+import 'package:flaha_inspect/map/tile_policy.dart';
 import 'package:flaha_inspect/db/app_database.dart';
 import 'package:flaha_inspect/features/projects/project_home.dart';
 import 'package:flaha_inspect/platform/device_ports.dart';
@@ -19,6 +21,22 @@ void main() {
   const baseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: 'http://127.0.0.1:3001',
+  );
+  const flavor = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
+  const tileUrl = String.fromEnvironment('TILE_PROVIDER_URL');
+  const tileAttr = String.fromEnvironment(
+    'TILE_PROVIDER_ATTRIBUTION',
+    defaultValue: defaultAttribution,
+  );
+  const tileUa = String.fromEnvironment(
+    'TILE_PROVIDER_USER_AGENT',
+    defaultValue: defaultUserAgent,
+  );
+  final tiles = resolveTilePolicy(
+    providerUrl: tileUrl,
+    attribution: tileAttr,
+    userAgent: tileUa,
+    isDev: flavor != 'prod' && flavor != 'staging',
   );
   final session = SecureSessionStore();
   final api = InspectApi(baseUrl: baseUrl, readAccessToken: session.readAccessToken);
@@ -41,6 +59,8 @@ void main() {
         disk: UnknownDiskSpace(),
         sync: worker,
       ),
+      maps: MapRepository(db),
+      tiles: tiles,
     ),
   );
 }
