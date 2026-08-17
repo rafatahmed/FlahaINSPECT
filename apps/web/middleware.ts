@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from './lib/session';
 
-const PROTECTED = ['/dashboard', '/points', '/projects', '/users'];
+const PROTECTED = ['/dashboard', '/points', '/projects', '/users', '/reports'];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -19,5 +19,15 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard', '/dashboard/:path*', '/points/:path*', '/projects', '/projects/:path*', '/users', '/users/:path*'],
+  matcher: [
+    '/dashboard',
+    '/dashboard/:path*',
+    '/points/:path*',
+    '/projects',
+    '/projects/:path*',
+    '/users',
+    '/users/:path*',
+    '/reports',
+    '/reports/:path*',
+  ],
 };

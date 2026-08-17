@@ -48,6 +48,19 @@ test('captured timestamps are UTC not host locale', () => {
   assert.match(helper, /toISOString/);
 });
 
+test('report generate handles 409 in progress and never exposes signed URLs', () => {
+  const ui = readFileSync(join(root, 'lib/report-ui.ts'), 'utf8');
+  assert.match(ui, /REPORT_IN_PROGRESS/);
+  assert.match(ui, /stripDownloadUrl/);
+  const client = readFileSync(join(root, 'components/reports-client.tsx'), 'utf8');
+  assert.match(client, /in_progress/);
+  assert.match(client, /\/bff\/reports\/\$\{r\.id\}\/file/);
+  assert.doesNotMatch(client, /download_url/);
+  const file = readFileSync(join(root, 'app/bff/reports/[id]/file/route.ts'), 'utf8');
+  assert.match(file, /content-type': 'application\/pdf'/);
+  assert.match(file, /download_url/);
+});
+
 test('photo img src uses BFF not a signed S3 URL (KD-41)', () => {
   const src = readFileSync(join(root, 'components/point-editor.tsx'), 'utf8');
   assert.match(src, /\/bff\/photos\/\$\{photo\.id\}\/thumb/);

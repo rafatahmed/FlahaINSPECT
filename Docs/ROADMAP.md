@@ -154,9 +154,9 @@ If only **one** engineer: serialize API (01–08) then mobile (10–12) then web
 
 | ID | PR | Work item | Deps | Status | Done when |
 |----|-----|-----------|------|--------|-----------|
-| R2-09 | PR-09 | Reports + Puppeteer worker | R1-07, R1-03 | `in-progress` | Lease/reclaim; KD-39; escaped text; 200 cap |
+| R2-09 | PR-09 | Reports + Puppeteer worker | R1-07, R1-03 | `done` | Lease/reclaim; KD-39; escaped text; 200 cap |
 | R2-13 | PR-13 | flutter_map + FMTC | R1-10, R1-11, **G-01** | `blocked` (G-01) | Wireframe 03 offline; no public OSM bulk |
-| R2-15 | PR-15 | Web report UX | R2-09, R1-14 | `not-started` | Poll + download + 409 UI |
+| R2-15 | PR-15 | Web report UX | R2-09, R1-14 | `in-progress` | Poll + download + 409 UI |
 | R2-16 | PR-16 | Metrics, GC, e2e, ops runbook | R1-12, R2-15 | `not-started` | e2e login→point→tus→list→PDF; runbook in `Docs/ops/` |
 | R2-17 | PR-17 | AR keys + capture polish | R1-11, R1-14 | `not-started` | Keys/RTL scaffold; contrast; accuracy UX |
 

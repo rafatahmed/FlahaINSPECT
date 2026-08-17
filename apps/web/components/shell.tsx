@@ -26,7 +26,9 @@ export function Shell({ children, email }: { children: ReactNode; email?: string
         <Link className={path.startsWith('/users') ? 'active' : ''} href="/users">
           Users
         </Link>
-        <span className="muted">Reports (R2)</span>
+        <Link className={path.startsWith('/reports') ? 'active' : ''} href="/reports">
+          Reports
+        </Link>
       </nav>
       <div className="main">
         <div className="header">
