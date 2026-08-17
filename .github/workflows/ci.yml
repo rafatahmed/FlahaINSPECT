@@ -70,6 +70,22 @@ jobs:
           curl -sf http://127.0.0.1:3001/health/ready
           echo
           curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:1080/files/ | grep -E '200|204|400|404|405'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Migrate twice + seed
+        env:
+          DATABASE_URL: postgres://flaha:flaha_dev_only@localhost:5433/flaha_inspect
+          SEED_PASSWORD: ci-seed-password-only
+          NODE_ENV: development
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @flaha/inspect-api db:migrate:twice
+          pnpm --filter @flaha/inspect-api db:seed
       - name: Hooks are not a host port
         run: |
           published="$(docker compose -f infra/docker-compose.yml --env-file .env ps --format json)"

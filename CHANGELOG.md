@@ -14,6 +14,11 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- PostGIS schema via Drizzle + raw SQL (PR-03 / R1-03): tables, triggers, `reports_one_active_per_project`, seed gated on `SEED_PASSWORD`.
+- `make migrate` / `make migrate-twice` / `make seed`.
+
+### Added (earlier)
+
 - Local Compose stack (PR-02 / R1-02): PostGIS 16, private MinIO bucket, tusd, api, worker. No Redis.
 - `.env.example` with `TILE_PROVIDER_URL` (KD-35) and `TUSD_HOOK_SECRET`.
 - API `GET /health/ready` (db + storage) and stub `POST /internal/tus` hooks (secret required).
@@ -22,6 +27,7 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 ### Changed
 
 - R1-01 marked **done** after merge of PR #13.
+- R1-02 marked **done** after merge of PR #14.
 
 ---
 

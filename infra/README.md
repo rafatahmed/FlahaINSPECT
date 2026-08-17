@@ -15,7 +15,7 @@ make down
 
 | Host port | Service |
 |-----------|---------|
-| 5432 | Postgres |
+| 5433 | Postgres (5433 on the host so a local Postgres on 5432 is left alone) |
 | 9000 | MinIO S3 API (private bucket; use credentials / signed URLs) |
 | 9001 | MinIO console (local only) |
 | 1080 | tusd uploads `/files/` |

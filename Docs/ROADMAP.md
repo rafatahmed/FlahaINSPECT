@@ -21,7 +21,7 @@ This file is the implementation plan you track against. Do not invent a second p
 
 **Status values:** `not-started` · `in-progress` · `blocked` · `done` · `deferred`
 
-**Current release in progress:** **R1** (branch `infra/pr-02-compose`). R0 tag: `r0-design-freeze`. R1-01 merged.
+**Current release in progress:** **R1** (branch `feat/pr-03-schema`). R0 tag: `r0-design-freeze`. R1-01 and R1-02 merged.
 
 ---
 
@@ -110,8 +110,8 @@ Dependencies are hard. Do not start a row whose deps are not `done`.
 | ID | PR | Work item | Deps | Status | Done when |
 |----|-----|-----------|------|--------|-----------|
 | R1-01 | PR-01 | Monorepo scaffold, CI skeleton, Flutter sibling | R0 | `done` | `apps/api|web|worker|mobile` exist; pnpm turbo for Node; mobile documented as sibling; CI lint/test placeholders green |
-| R1-02 | PR-02 | Compose: PostGIS, private MinIO, tusd, api/worker stubs | R1-01 | `in-progress` | `make up` healthy; hook ports internal; `.env.example`; `TILE_PROVIDER_URL` placeholder |
-| R1-03 | PR-03 | Drizzle + raw SQL schema, triggers, seeds | R1-02 | `not-started` | Migration applies twice (expand-safe); seed uses `SEED_PASSWORD`; unique active-report index |
+| R1-02 | PR-02 | Compose: PostGIS, private MinIO, tusd, api/worker stubs | R1-01 | `done` | `make up` healthy; hook ports internal; `.env.example`; `TILE_PROVIDER_URL` placeholder |
+| R1-03 | PR-03 | Drizzle + raw SQL schema, triggers, seeds | R1-02 | `in-progress` | Migration applies twice (expand-safe); seed uses `SEED_PASSWORD`; unique active-report index |
 | R1-04 | PR-04 | Auth + OpenAPI + error catalog | R1-03 | `not-started` | Login/refresh/logout/me/set-password; rotation + reuse revoke; `ver`; lockout; set-password revokes families |
 | R1-05 | PR-05 | Users, projects, memberships, api-client | R1-04 | `not-started` | Manager CRUD; inspector list assigned; bbox from boundary; archive vs soft-delete |
 | R1-06 | PR-06 | Inspection points API | R1-05 | `not-started` | Idempotent create KD-31; manager PATCH only remarks/procedure/status; KD-40 lengths |
