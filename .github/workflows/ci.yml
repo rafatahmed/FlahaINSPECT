@@ -37,8 +37,47 @@ jobs:
         run: pnpm typecheck
       - name: Test
         run: pnpm test
+      - name: Infra contract
+        run: pnpm run test:infra
       - name: Build
         run: pnpm build
+
+  compose:
+    name: docker compose smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Config
+        run: |
+          cp .env.example .env
+          docker compose -f infra/docker-compose.yml --env-file .env config >/dev/null
+      - name: Up
+        run: docker compose -f infra/docker-compose.yml --env-file .env up -d --build
+      - name: Wait for API health
+        run: |
+          for i in $(seq 1 40); do
+            if curl -sf http://127.0.0.1:3001/health; then
+              echo
+              exit 0
+            fi
+            sleep 3
+          done
+          docker compose -f infra/docker-compose.yml --env-file .env logs
+          exit 1
+      - name: Ready + tusd port
+        run: |
+          curl -sf http://127.0.0.1:3001/health/ready
+          echo
+          curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:1080/files/ | grep -E '200|204|400|404|405'
+      - name: Hooks are not a host port
+        run: |
+          published="$(docker compose -f infra/docker-compose.yml --env-file .env ps --format json)"
+          echo "$published"
+          echo "$published" | grep -v '8081'
+      - name: Down
+        if: always()
+        run: docker compose -f infra/docker-compose.yml --env-file .env down -v
 
   mobile:
     name: flutter sibling
