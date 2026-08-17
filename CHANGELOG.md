@@ -14,6 +14,10 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- Inspection points API (PR-06 / R1-06): idempotent create (`ON CONFLICT DO NOTHING`), list/bbox, manager patch/soft-delete.
+
+### Added (earlier)
+
 - Users, projects, memberships (PR-05 / R1-05); inspector list is assignment-only; archive vs soft-delete.
 - Typed `packages/api-client` covering auth + users + projects.
 
@@ -41,6 +45,7 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 - R1-02 marked **done** after merge of PR #14.
 - R1-03 marked **done** after merge of PR #15.
 - R1-04 marked **done** after merge of PR #16.
+- R1-05 marked **done** after merge of PR #17.
 
 ---
 
