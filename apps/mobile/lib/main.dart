@@ -8,6 +8,8 @@ import 'package:flaha_inspect/db/app_database.dart';
 import 'package:flaha_inspect/features/projects/project_home.dart';
 import 'package:flaha_inspect/platform/device_ports.dart';
 import 'package:flaha_inspect/platform/io_photo_files.dart';
+import 'package:flaha_inspect/sync/outbox_worker.dart';
+import 'package:flaha_inspect/sync/tus_client.dart';
 import 'package:flutter/material.dart';
 
 const appVersion = '0.0.1';
@@ -21,6 +23,8 @@ void main() {
   final session = SecureSessionStore();
   final api = InspectApi(baseUrl: baseUrl, readAccessToken: session.readAccessToken);
   final db = AppDatabase();
+  final files = IoPhotoFiles();
+  final worker = OutboxWorker(db: db, api: api, files: files, tus: TusClient());
   runApp(
     FlahaInspectApp(
       auth: AuthRepository(
@@ -31,10 +35,11 @@ void main() {
       ),
       projects: ProjectRepository(db: db, api: api),
       capture: CaptureBindings(
-        capture: CaptureRepository(db: db, files: IoPhotoFiles(), appVersion: appVersion),
+        capture: CaptureRepository(db: db, files: files, appVersion: appVersion),
         location: GeolocatorSource(),
         photos: ImagePickerSource(),
         disk: UnknownDiskSpace(),
+        sync: worker,
       ),
     ),
   );

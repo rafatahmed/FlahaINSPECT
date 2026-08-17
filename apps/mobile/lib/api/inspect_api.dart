@@ -257,4 +257,37 @@ class InspectApi {
     return _json('GET', '/sync/projects', query: query.isEmpty ? null : query)
         .then((json) => DeltaPage.fromJson(json!));
   }
+
+  Future<Map<String, dynamic>> createInspectionPoint(Map<String, Object?> body) async {
+    final json = await _json('POST', '/inspection-points', body: body);
+    return json!;
+  }
+
+  Future<Map<String, dynamic>> registerPhoto(Map<String, Object?> body) async {
+    final json = await _json('POST', '/photos', body: body);
+    return json!;
+  }
+
+  Future<Map<String, dynamic>> getPhoto(String id) async {
+    final json = await _json('GET', '/photos/$id');
+    return json!;
+  }
+
+  Future<Map<String, dynamic>> syncProjectPoints(
+    String projectId, {
+    String? sinceUpdatedAt,
+    String? sinceId,
+    int? limit,
+  }) async {
+    final query = <String, String>{};
+    if (sinceUpdatedAt != null) query['since_updated_at'] = sinceUpdatedAt;
+    if (sinceId != null) query['since_id'] = sinceId;
+    if (limit != null) query['limit'] = '$limit';
+    final json = await _json(
+      'GET',
+      '/sync/projects/$projectId/points',
+      query: query.isEmpty ? null : query,
+    );
+    return json!;
+  }
 }

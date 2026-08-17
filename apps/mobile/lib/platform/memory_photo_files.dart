@@ -23,4 +23,11 @@ class MemoryPhotoFiles implements PhotoFiles {
       thumb: '$prefix/thumb.jpg',
     );
   }
+
+  @override
+  Future<Uint8List> readUpload(String path) async {
+    final bytes = files[path];
+    if (bytes == null) throw StateError('missing $path');
+    return bytes;
+  }
 }

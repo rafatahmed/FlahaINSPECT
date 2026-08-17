@@ -5,6 +5,8 @@ import 'package:flaha_inspect/capture/storage_gate.dart';
 import 'package:flaha_inspect/data/capture_repository.dart';
 import 'package:flaha_inspect/data/project_repository.dart';
 import 'package:flaha_inspect/features/capture/capture_screen.dart';
+import 'package:flaha_inspect/features/sync/sync_screen.dart';
+import 'package:flaha_inspect/sync/outbox_worker.dart';
 import 'package:flutter/material.dart';
 
 class CaptureBindings {
@@ -13,12 +15,14 @@ class CaptureBindings {
     required this.location,
     required this.photos,
     required this.disk,
+    this.sync,
   });
 
   final CaptureGateway capture;
   final LocationSource location;
   final PhotoSource photos;
   final DiskSpace disk;
+  final OutboxWorker? sync;
 }
 
 class ProjectHomeScreen extends StatelessWidget {
@@ -37,6 +41,22 @@ class ProjectHomeScreen extends StatelessWidget {
           children: [
             const Text('Map — PR-13'),
             const SizedBox(height: 16),
+            if (bindings.sync != null)
+              FilledButton.tonal(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => SyncScreen(
+                        projectId: project.id,
+                        projectName: project.name,
+                        worker: bindings.sync!,
+                      ),
+                    ),
+                  );
+                },
+                child: const Text('Sync'),
+              ),
+            const SizedBox(height: 8),
             if (project.isArchived)
               const Text(archivedNoCapture)
             else

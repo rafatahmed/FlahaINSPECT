@@ -25,4 +25,7 @@ class IoPhotoFiles implements PhotoFiles {
     await File(thumbPath).writeAsBytes(thumb, flush: true);
     return PhotoPaths(original: originalPath, upload: uploadPath, thumb: thumbPath);
   }
+
+  @override
+  Future<Uint8List> readUpload(String path) => File(path).readAsBytes();
 }
