@@ -21,6 +21,10 @@ Auth (PR-04), all under `/v1/auth`:
 - `GET /me` Bearer access token
 - `POST /set-password` manager only; bumps `token_version` and revokes refresh families
 
+Users (manager, `/v1/users`): list, create, patch (role change bumps `token_version`).
+
+Projects (`/v1/projects`): inspectors see assigned only; managers see all non-deleted. Archive vs soft-delete. Membership stores `member_role` but AuthZ ignores it (KD-33).
+
 OpenAPI: `openapi/flaha-inspect-v1.yaml`.
 
 ```bash

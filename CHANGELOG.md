@@ -14,6 +14,11 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- Users, projects, memberships (PR-05 / R1-05); inspector list is assignment-only; archive vs soft-delete.
+- Typed `packages/api-client` covering auth + users + projects.
+
+### Added (earlier)
+
 - JWT auth (PR-04 / R1-04): login, refresh rotation + reuse detection, logout, `/me`, manager `set-password` (bumps `token_version`, revokes families).
 - Error catalog filter and `openapi/flaha-inspect-v1.yaml`.
 - KD-42 login lockout (10/min/IP + 10 failures/email/15 min).
@@ -35,6 +40,7 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 - R1-01 marked **done** after merge of PR #13.
 - R1-02 marked **done** after merge of PR #14.
 - R1-03 marked **done** after merge of PR #15.
+- R1-04 marked **done** after merge of PR #16.
 
 ---
 
