@@ -14,6 +14,8 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- Reports + Puppeteer worker (PR-09 / R2-09): manager `POST /projects/:id/reports` (202); KD-39 `409 REPORT_IN_PROGRESS`; 200-point cap; 15m job lease + reclaim; notes HTML-escaped; PDF key `reports/{project}/{id}.pdf`.
+
 - Mobile map (PR-13 / R1-13): flutter_map, category markers, tile policy (KD-35 / G-01). Public OSM is ambient-only; bulk download requires `TILE_PROVIDER_URL`.
 - Brand marks: color / black / white wordmarks on transparent backgrounds (`brand/`, web `public/brand/`, mobile `assets/brand/`).
 

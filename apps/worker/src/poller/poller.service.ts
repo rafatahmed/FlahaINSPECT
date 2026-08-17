@@ -2,7 +2,8 @@ import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/commo
 import { S3Client } from '@aws-sdk/client-s3';
 import { randomUUID } from 'node:crypto';
 import { Pool } from 'pg';
-import { claimJob, finishJob } from '../jobs/claimer';
+import { claimJob, finishJob, reclaimExpiredLeases } from '../jobs/claimer';
+import { handleReport } from '../jobs/report.handler';
 import { handleThumbnail } from '../jobs/thumbnail.handler';
 
 @Injectable()
@@ -50,16 +51,20 @@ export class PollerService implements OnModuleInit, OnModuleDestroy {
     if (this.running || !this.pool) return;
     this.running = true;
     try {
+      await reclaimExpiredLeases(this.pool);
       const job = await claimJob(this.pool, this.workerId);
       if (!job) return;
       try {
-        if (job.type !== 'generate_thumbnail' || !job.payload.photo_id) {
-          throw new Error(`unhandled job type ${job.type}`);
-        }
         if (!this.s3 || !process.env.S3_BUCKET) {
           throw new Error('S3 is not configured');
         }
-        await handleThumbnail(this.pool, this.s3, process.env.S3_BUCKET, job.payload.photo_id);
+        if (job.type === 'generate_thumbnail' && job.payload.photo_id) {
+          await handleThumbnail(this.pool, this.s3, process.env.S3_BUCKET, job.payload.photo_id);
+        } else if (job.type === 'generate_report' && job.payload.report_id) {
+          await handleReport(this.pool, this.s3, process.env.S3_BUCKET, job.payload.report_id);
+        } else {
+          throw new Error(`unhandled job type ${job.type}`);
+        }
         await finishJob(this.pool, job.id, true);
       } catch (err) {
         const message = err instanceof Error ? err.message : 'job failed';

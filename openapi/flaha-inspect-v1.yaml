@@ -15,6 +15,7 @@ tags:
   - name: Inspections
   - name: Photos
   - name: Sync
+  - name: Reports
 paths:
   /auth/login:
     post:
@@ -488,6 +489,62 @@ paths:
       responses:
         '200':
           description: Accepted
+  /projects/{id}/reports:
+    post:
+      operationId: createProjectReport
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      summary: Enqueue a PDF report (manager, KD-39)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+      responses:
+        '202':
+          description: Queued
+        '400':
+          description: More than 200 points
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: REPORT_IN_PROGRESS
+    get:
+      operationId: listProjectReports
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      summary: Report history for a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: History
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      summary: Report status and 1h download URL when ready
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Status
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   securitySchemes:
     bearerAuth:
