@@ -12,7 +12,12 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ## [Unreleased]
 
-Nothing yet. Application code starts at PR-01 (`R1-01` on the roadmap).
+### Added
+
+- Monorepo scaffold (PR-01 / R1-01): pnpm workspaces + Turborepo for `apps/api`, `apps/web`, `apps/worker`, `packages/api-client`.
+- Flutter sibling at `apps/mobile` (`com.flaha.inspect`) — documented as **not** a turbo/pnpm package.
+- GitHub Actions CI: Node lint/typecheck/test/build; separate Flutter analyze/test job.
+- Makefile entry points; `GET /health` on the API stub.
 
 ---
 

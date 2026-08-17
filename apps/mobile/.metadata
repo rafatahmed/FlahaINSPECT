@@ -1,0 +1,17 @@
+# This file tracks properties of this Flutter project.
+# Used by Flutter tool to assess capabilities and perform upgrades.
+#
+# This file should be version controlled and should not be manually edited.
+
+version:
+  revision: "r0-design-freeze-scaffold"
+  channel: "stable"
+
+project_type: app
+
+# Package ID locked in the TDD (KD-25).
+# Generate android/ios/linux/macos/windows with:
+#   flutter create --org com.flaha --project-name flaha_inspect --platforms=android,ios .
+migration:
+  platforms: []
+  unmanaged_files: []

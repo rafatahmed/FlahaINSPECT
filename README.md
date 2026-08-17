@@ -13,8 +13,8 @@ Field inspectors capture geotagged photos with a single category (**Defect** / *
 | Item | State |
 |------|--------|
 | Product name | **FlahaINSPECT** |
-| Repository | Docs + **design freeze**; application code not scaffolded yet |
-| Current release | **R0 complete** (2026-08-17) — next is **R1 / PR-01** |
+| Repository | Monorepo scaffold on `chore/pr-01-monorepo-scaffold` (R1-01) |
+| Current release | **R1 in progress** — R0 tag `r0-design-freeze` |
 | Design of record | [`Docs/FlahaINSPECT - Technical Design (MVP).md`](Docs/FlahaINSPECT%20-%20Technical%20Design%20(MVP).md) |
 | Plan / tracking | [`Docs/ROADMAP.md`](Docs/ROADMAP.md) |
 | Gaps | [`Docs/GAPS.md`](Docs/GAPS.md) |
@@ -35,20 +35,19 @@ Field inspectors capture geotagged photos with a single category (**Defect** / *
 | Node monorepo | pnpm + Turborepo (`apps/api`, `apps/web`, `apps/worker`, `packages/*`) |
 | Mobile layout | Sibling Flutter app under `apps/mobile` (own toolchain/CI) |
 
-Target layout (from technical design):
+Layout (PR-01 scaffold; Compose is PR-02):
 
 ```text
 FlahaINSPECT/
   apps/
-    api/                 # NestJS
-    worker/              # background jobs
-    web/                 # Next.js
-    mobile/              # Flutter
+    api/                 # @flaha/inspect-api (NestJS)
+    worker/              # @flaha/inspect-worker
+    web/                 # @flaha/inspect-web (Next.js)
+    mobile/              # Flutter sibling — NOT in pnpm/turbo
   packages/
-    api-client/          # OpenAPI-generated TS client
-  infra/
-    docker-compose.yml
-  Docs/                  # product & design docs (current)
+    api-client/          # @flaha/inspect-api-client (codegen from PR-05)
+  infra/                 # docker-compose in PR-02
+  Docs/
   openapi/
   Makefile
 ```
@@ -89,22 +88,31 @@ This repo is set up for a secure monorepo baseline:
 
 ---
 
-## Getting started (when code lands)
-
-Scaffolding will follow the technical design PR plan (monorepo + Docker Compose + Flutter app). Until then:
+## Getting started
 
 1. Read the [Roadmap](Docs/ROADMAP.md) then the [Technical Design (MVP)](Docs/FlahaINSPECT%20-%20Technical%20Design%20(MVP).md).
-2. Do not start PR-01 until R0 on the roadmap is `done` (it is).
-3. Keep secrets out of git; use `.env.example` patterns once apps exist.
-4. Prefer **pnpm** for Node workspaces; Flutter via its own CLI in `apps/mobile`.
+2. Node **20+** and **pnpm 9** (`corepack enable` then `corepack prepare pnpm@9.15.9 --activate`, or `corepack pnpm`).
+3. Flutter SDK only if you work in `apps/mobile` — see [apps/mobile/README.md](apps/mobile/README.md).
+4. Keep secrets out of git. `.env.example` arrives with PR-02.
 
 ```bash
-# After monorepo scaffold (not available yet)
-# pnpm install
-# make up          # docker compose: Postgres+PostGIS, MinIO, tusd, api, worker
-# pnpm --filter @flaha/inspect-api dev
-# pnpm --filter @flaha/inspect-web dev
-# cd apps/mobile && flutter pub get && flutter run
+corepack pnpm install
+corepack pnpm lint
+corepack pnpm test
+corepack pnpm typecheck
+corepack pnpm build
+
+# or
+make install lint test typecheck build
+
+corepack pnpm --filter @flaha/inspect-api dev     # :3001/health
+corepack pnpm --filter @flaha/inspect-web dev     # :3000
+corepack pnpm --filter @flaha/inspect-worker dev
+
+# mobile (Flutter CLI; not turbo)
+make mobile-get mobile-analyze mobile-test
+
+# make up   # PR-02 — docker compose not in this PR
 ```
 
 ---
