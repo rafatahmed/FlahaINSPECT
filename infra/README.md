@@ -20,5 +20,6 @@ make down
 | 9001 | MinIO console (local only) |
 | 1080 | tusd uploads `/files/` |
 | 3001 | Nest API |
+| 8082 | TileServer GL (optional `--profile tiles`; G-01) |
 
 Hook endpoints are **not** mapped to extra host ports.

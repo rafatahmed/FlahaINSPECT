@@ -16,6 +16,16 @@ void main() {
     expect(p.allowBulkDownload, isFalse);
   });
 
+  test('self-hosted TileServer GL URL allows bulk (G-01 / KD-43)', () {
+    final p = resolveTilePolicy(
+      providerUrl: 'http://127.0.0.1:8082/styles/basic-preview/{z}/{x}/{y}.png',
+      isDev: false,
+    );
+    expect(p.allowBulkDownload, isTrue);
+    expect(p.usesPublicOsm, isFalse);
+    expect(p.tilesAvailable, isTrue);
+  });
+
   test('licensed URL allows FMTC-style bulk; OSM URL does not', () {
     final licensed = resolveTilePolicy(
       providerUrl: 'https://tiles.example.com/{z}/{x}/{y}.png',

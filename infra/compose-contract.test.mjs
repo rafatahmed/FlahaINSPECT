@@ -35,11 +35,19 @@ test('MinIO init forces a private bucket', () => {
 
 test('.env.example includes TILE_PROVIDER_URL (KD-35) and hook secret', () => {
   assert.match(envExample, /^TILE_PROVIDER_URL=/m);
+  assert.match(envExample, /^TILE_PORT=/m);
+  assert.match(envExample, /TileServer GL/);
   assert.match(envExample, /^TUSD_HOOK_SECRET=/m);
   assert.match(envExample, /^S3_BUCKET=/m);
   assert.match(envExample, /^RETENTION_ARCHIVE_MONTHS=12/m);
   assert.match(envExample, /^UPLOADS_ENABLED=/m);
   assert.match(envExample, /^PDF_ENABLED=/m);
+});
+
+test('compose tiles profile is self-hosted TileServer GL not public OSM', () => {
+  assert.match(compose, /maptiler\/tileserver-gl:/);
+  assert.match(compose, /profiles: \[tiles\]/);
+  assert.doesNotMatch(compose, /tile\.openstreetmap\.org/);
 });
 
 test('pilot e2e covers login point tus list PDF', () => {
