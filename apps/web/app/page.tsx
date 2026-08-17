@@ -1,11 +1,11 @@
-import { API_PREFIX, PRODUCT } from '@flaha/inspect-api-client';
+import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
+import { ACCESS_COOKIE, REFRESH_COOKIE } from '@/lib/session';
 
-export default function HomePage() {
-  return (
-    <main>
-      <h1>{PRODUCT}</h1>
-      <p>Manager dashboard scaffold (PR-01). Auth and map land in PR-14.</p>
-      <p>API prefix: {API_PREFIX}</p>
-    </main>
-  );
+export default async function HomePage() {
+  const jar = await cookies();
+  if (jar.get(ACCESS_COOKIE)?.value || jar.get(REFRESH_COOKIE)?.value) {
+    redirect('/dashboard');
+  }
+  redirect('/login');
 }

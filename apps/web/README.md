@@ -1,8 +1,11 @@
 # `@flaha/inspect-web`
 
-Next.js App Router dashboard. PR-01 is a placeholder page.
+Next.js App Router manager dashboard.
 
-Cookie BFF, Leaflet, and the point editor are **PR-14**.
+- Login sets **HttpOnly** `flaha_access` / `flaha_refresh` (no tokens in `localStorage`).
+- Pages call `/bff/*`; images use `/bff/photos/:id/thumb` (KD-41).
+- Dashboard: Leaflet map, category legend (Defect/Normal/Note), filters, stats.
+- Point editor: field note read-only; remarks / procedure / status + version.
 
 ```bash
 corepack pnpm --filter @flaha/inspect-web dev
