@@ -4,10 +4,44 @@ This is a **Flutter sibling app**. It is **not** a pnpm workspace package and **
 
 Do not add `apps/mobile` to `pnpm-workspace.yaml`.
 
+## Flutter + Drift (the one way)
+
+1. Pin lives in [`.flutter-version`](./.flutter-version). CI and `make mobile-bootstrap` use that exact SDK.
+2. Drift tables live in `lib/db/tables.dart`. The database is `lib/db/app_database.dart`.
+3. **Commit** generated `lib/db/app_database.g.dart`. After any schema change:
+
+```bash
+make mobile-generate
+# commit the updated *.g.dart
+```
+
+CI runs `build_runner` and **fails** if generated files are stale (`git diff --exit-code`).
+
+Session JWTs are **never** Drift columns (KD-37). They go in `SecureSessionStore` (Keychain / Keystore).
+
+### First time on a machine
+
+```bash
+# repo root
+make mobile-bootstrap    # clones pinned Flutter to %LOCALAPPDATA%/flutter and prepends PATH
+make mobile-get
+make mobile-generate     # only needed after schema edits if .g.dart is missing
+make mobile-analyze
+make mobile-test
+```
+
+Or:
+
+```powershell
+pwsh -File apps/mobile/tool/bootstrap-flutter.ps1
+```
+
+Override install location with `FLAHA_FLUTTER_HOME`. Override the binary with `FLUTTER=/path/to/flutter`.
+
 ## Tooling
 
-- Flutter stable (3.24+), Dart SDK matching `pubspec.yaml`
-- Android Studio / Xcode only when you need device builds
+- Flutter version = `.flutter-version` (do not float `channel: stable` in CI).
+- Android Studio / Xcode only when you need device builds.
 
 Platform folders (`android/`, `ios/`, …) are generated locally when you first need a device:
 
@@ -22,7 +56,9 @@ That command must keep the existing `lib/` and `test/` sources. The application 
 
 ```bash
 # from repo root
+make mobile-bootstrap
 make mobile-get
+make mobile-generate
 make mobile-analyze
 make mobile-test
 make mobile-run
@@ -30,13 +66,14 @@ make mobile-run
 # or
 cd apps/mobile
 flutter pub get
+dart run build_runner build
 flutter analyze
 flutter test
-flutter run
+flutter run --dart-define=API_BASE_URL=http://127.0.0.1:3001
 ```
 
-CI runs analyze + test via `.github/workflows/ci.yml` (`subosito/flutter-action`). It does **not** go through `turbo`.
+CI: `.github/workflows/ci.yml` job `flutter sibling` — pin + pub get + generate + dirty check + analyze + test. Not turbo.
 
-## What is not here yet
+## API
 
-Drift, secure storage, login, capture, TUS, maps — PR-10 onward. This PR is the empty shell so CI and layout exist on day one.
+`--dart-define=API_BASE_URL=http://127.0.0.1:3001` (Android emulator: `http://10.0.2.2:3001`).

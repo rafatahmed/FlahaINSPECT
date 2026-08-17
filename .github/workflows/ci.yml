@@ -104,12 +104,20 @@ jobs:
         working-directory: apps/mobile
     steps:
       - uses: actions/checkout@v4
+      - name: Read Flutter pin
+        id: flutter_pin
+        run: echo "version=$(tr -d '\r\n' < apps/mobile/.flutter-version)" >> "$GITHUB_OUTPUT"
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: ${{ steps.flutter_pin.outputs.version }}
           cache: true
       - name: Pub get
         run: flutter pub get
+      - name: Generate Drift
+        run: dart run build_runner build
+      - name: Generated Drift files must be committed
+        run: git diff --exit-code
       - name: Analyze
         run: flutter analyze --no-fatal-infos
       - name: Test
