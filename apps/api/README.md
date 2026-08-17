@@ -13,7 +13,15 @@ make migrate-twice
 SEED_PASSWORD=dev-seed-only-change-me make seed
 ```
 
-Auth starts in PR-04.
+Auth (PR-04), all under `/v1/auth`:
+
+- `POST /login` `{ email, password }`
+- `POST /refresh` `{ refresh_token }`
+- `POST /logout` `{ refresh_token }` → 204
+- `GET /me` Bearer access token
+- `POST /set-password` manager only; bumps `token_version` and revokes refresh families
+
+OpenAPI: `openapi/flaha-inspect-v1.yaml`.
 
 ```bash
 corepack pnpm --filter @flaha/inspect-api dev

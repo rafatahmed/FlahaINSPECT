@@ -14,6 +14,12 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- JWT auth (PR-04 / R1-04): login, refresh rotation + reuse detection, logout, `/me`, manager `set-password` (bumps `token_version`, revokes families).
+- Error catalog filter and `openapi/flaha-inspect-v1.yaml`.
+- KD-42 login lockout (10/min/IP + 10 failures/email/15 min).
+
+### Added (earlier)
+
 - PostGIS schema via Drizzle + raw SQL (PR-03 / R1-03): tables, triggers, `reports_one_active_per_project`, seed gated on `SEED_PASSWORD`.
 - `make migrate` / `make migrate-twice` / `make seed`.
 
@@ -28,6 +34,7 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 - R1-01 marked **done** after merge of PR #13.
 - R1-02 marked **done** after merge of PR #14.
+- R1-03 marked **done** after merge of PR #15.
 
 ---
 
