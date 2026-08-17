@@ -22,13 +22,21 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.9
+      # Official actions + corepack only. pnpm/action-setup tarball 429s at Set up job.
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.9 --activate
+          echo "STORE_PATH=$(pnpm store path)" >> "$GITHUB_ENV"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
       - name: Install
         run: pnpm install --frozen-lockfile
       - name: Lint
@@ -70,13 +78,20 @@ jobs:
           curl -sf http://127.0.0.1:3001/health/ready
           echo
           curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:1080/files/ | grep -E '200|204|400|404|405'
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.9
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.9 --activate
+          echo "STORE_PATH=$(pnpm store path)" >> "$GITHUB_ENV"
+      - uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
       - name: Migrate twice + seed
         env:
           DATABASE_URL: postgres://flaha:flaha_dev_only@localhost:5433/flaha_inspect

@@ -17,6 +17,10 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 - Mobile map (PR-13 / R1-13): flutter_map, category markers, tile policy (KD-35 / G-01). Public OSM is ambient-only; bulk download requires `TILE_PROVIDER_URL`.
 - Brand marks: color / black / white wordmarks on transparent backgrounds (`brand/`, web `public/brand/`, mobile `assets/brand/`).
 
+### Changed
+
+- CI node + compose jobs enable pnpm via corepack (no `pnpm/action-setup`). Same 429-at-Set-up-job class as `subosito/flutter-action`.
+
 ### Added (earlier)
 
 - Web cookie BFF, Leaflet dashboard, point editor (PR-14 / R1-14). HttpOnly cookies; media via `/bff/photos/:id`; category legend.
