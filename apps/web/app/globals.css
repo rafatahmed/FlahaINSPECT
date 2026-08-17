@@ -1,0 +1,49 @@
+:root {
+  color-scheme: light;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  --ink: #1a1a1a;
+  --muted: #5c6570;
+  --line: #d8dee6;
+  --bg: #f4f6f8;
+  --card: #fff;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; color: var(--ink); background: var(--bg); }
+a { color: inherit; }
+input, textarea, select, button { font: inherit; }
+.shell { display: grid; grid-template-columns: 200px 1fr; min-height: 100vh; }
+.nav { background: #1b2838; color: #fff; padding: 1rem 0.75rem; }
+.nav a { display: block; padding: 0.45rem 0.6rem; text-decoration: none; border-radius: 4px; }
+.nav a:hover, .nav a.active { background: #2c3e50; }
+.main { padding: 1rem 1.25rem; }
+.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 1rem; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 1rem; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 0.9rem; }
+.card strong { display: block; font-size: 1.4rem; }
+.legend { display: flex; gap: 1rem; font-size: 0.9rem; margin: 0.5rem 0 1rem; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 0.35rem; }
+.layout-split { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1rem; }
+.map { height: 420px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #e8eef3; }
+table { width: 100%; border-collapse: collapse; background: var(--card); }
+th, td { text-align: left; padding: 0.45rem 0.5rem; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+.filters { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+.login { max-width: 360px; margin: 12vh auto; background: var(--card); padding: 2rem; border-radius: 10px; border: 1px solid var(--line); }
+.login h1 { text-align: center; }
+.login img { margin: 0 auto 0.75rem; }
+.login label { display: block; margin: 0.75rem 0 0.25rem; }
+.login input, .editor input, .editor textarea, .editor select, .filters select {
+  width: 100%; padding: 0.5rem; border: 1px solid var(--line); border-radius: 6px;
+}
+.login button, .editor button, .header button {
+  margin-top: 1rem; width: 100%; padding: 0.6rem; border: 0; border-radius: 6px; background: #1b2838; color: #fff; cursor: pointer;
+}
+.header button { width: auto; margin: 0; }
+.error { color: #c0392b; margin-top: 0.75rem; }
+.editor { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.muted { color: var(--muted); }
+.photo-ph { height: 240px; display: grid; place-items: center; background: #eceff3; border-radius: 8px; }
+img.media { max-width: 100%; border-radius: 8px; }
+@media (max-width: 900px) {
+  .shell { grid-template-columns: 1fr; }
+  .layout-split, .editor, .cards { grid-template-columns: 1fr; }
+}

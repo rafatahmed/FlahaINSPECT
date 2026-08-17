@@ -1,5 +1,6 @@
 import 'package:flaha_inspect/api/inspect_api.dart';
 import 'package:flaha_inspect/auth/login_copy.dart';
+import 'package:flaha_inspect/brand/brand_mark.dart';
 import 'package:flaha_inspect/data/auth_repository.dart';
 import 'package:flaha_inspect/features/login/login_screen.dart';
 import 'package:flutter/material.dart';
@@ -30,7 +31,8 @@ void main() {
         ),
       ),
     );
-    expect(find.text(productName), findsOneWidget);
+    expect(find.byType(BrandMark), findsOneWidget);
+    expect(find.bySemanticsLabel(productName), findsOneWidget);
     expect(find.text(loginButtonLabel), findsOneWidget);
     expect(find.text('Email'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
