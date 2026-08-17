@@ -18,7 +18,7 @@ This file is the only place residual unknowns live. If a topic is **not** listed
 | R0-02 | Rename Schematics off `FlahaINSPCT` | **done** | `Docs/FlahaINSPECT - System Schematics.md` |
 | R0-03 | Patch TDD (tokens, TUS resume, roles, reports, validation, URLs, delta) | **done** | KD-33 … KD-42 |
 | R0-04 | Lock originals vs compressed (evidence class) | **done** | KD-36 — operational, not forensic |
-| R0-05 | Lock tile-provider *policy* | **done** | KD-35 — vendor name still G-01 |
+| R0-05 | Lock tile-provider *policy* | **done** | KD-35 policy; source named KD-43 |
 | R0-06 | UX of record (annotated wireframes) | **done** | `Docs/Wireframes/`; `Docs/Photo/` is mood |
 | R0-07 | Real security contact | **done** | `SECURITY.md` |
 | R0-08 | Roadmap + changelog + this register | **done** | This release |
@@ -50,7 +50,7 @@ R0 exit: all rows above `done`. **PR-01 may start.**
 
 | ID | Gap | Blocks | Status | Default until decided | Owner |
 |----|-----|--------|--------|------------------------|-------|
-| G-01 | Named tile vendor or self-hosted tile URL for staging/prod | PR-13 **device/pilot build** | `open` | Local/dev: OSM ambient only, no bulk scrape. Decision brief: [G-01-tile-source.md](./G-01-tile-source.md) | Platform |
+| G-01 | Named tile vendor or self-hosted tile URL for staging/prod | PR-13 **device/pilot build** | `decided` | **KD-43:** self-hosted TileServer GL + Qatar extract (option 8). Brief: [G-01-tile-source.md](./G-01-tile-source.md) | Platform |
 | G-02 | Production cloud region / data residency confirmation | First **external-client** data (not internal Flaha pilot) | `open` | KD-30: single region nearest Flaha ops | Legal + platform |
 | G-04 | App distribution (MDM vs store) | Devices leaving staging | `open` | Internal sideload / TestFlight / internal Play for R1 | Mobile |
 | G-05 | Retention months after project archive | PR-16 GC job numbers | `open` | 12 months of **upload candidates** (`RETENTION_ARCHIVE_MONTHS`, wired in PR-16) | Ops |

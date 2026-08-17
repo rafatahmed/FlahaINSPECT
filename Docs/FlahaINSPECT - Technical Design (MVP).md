@@ -1350,7 +1350,7 @@ Do **not** promise clients “full-resolution camera files with GPS EXIF.” A f
 - **Library:** flutter_map + FMTC (**KD-9**). MapLibre OfflineManager is a documented alternative if vector offline becomes required.  
 - **Provider (KD-35):**  
   - **local/dev:** OSM-compatible raster, User-Agent `FlahaINSPECT/1.0`, visible attribution; **no automated bulk region download against public OSM** (ambient cache of tiles the engineer already viewed is OK).  
-  - **staging/pilot/production:** contracted commercial tiles **or** self-hosted tile pack. PR-13 does **not** merge to a device build until `TILE_PROVIDER_URL` + license notes exist in `.env.example`.  
+  - **staging/pilot/production:** **self-hosted TileServer GL + Qatar extract (KD-43)**. `TILE_PROVIDER_URL` is that XYZ. Contracted commercial tiles remain an allowed alternative if we later change KD-43.  
 - **Pre-cache (pilot+ only, against the licensed source):** boundary/bbox + **300 m** buffer, zoom **12–17**.  
 - **Overlays:** boundary, category markers, user location, accuracy circle.  
 - **Out-of-boundary:** allow capture; flag `outside_boundary`.
@@ -1638,6 +1638,7 @@ Redis adds compose/ops. **SQL `jobs` + worker** locked for MVP reliability witho
 | KD-40 | **Plain-text length caps + HTML-escape in web/PDF** | XSS / Puppeteer injection |
 | KD-41 | **Web media via BFF; do not rely on 10-minute signed URLs in the SPA** | Dead thumbs |
 | KD-42 | **Login: 10/min/IP + 10 failures/email/15 min lockout** | Password spray |
+| KD-43 | **Pilot/prod tiles = self-hosted TileServer GL serving a Qatar OpenStreetMap extract** (Geofabrik PBF → Planetiler MBTiles). `TILE_PROVIDER_URL` is that XYZ. Attribution © OpenStreetMap contributors. Public `tile.openstreetmap.org` stays ambient-dev only. | Closes G-01 without a SaaS prefetch license |
 
 ---
 
@@ -1662,7 +1663,7 @@ Redis adds compose/ops. **SQL `jobs` + worker** locked for MVP reliability witho
 
 *(Blocking items converted to Key Decisions with defaults above. Residual non-blocking:)*
 
-1. **Exact production tile vendor / self-host** (KD-35 locks the *policy*; vendor name still TBD — **blocks PR-13 device build**, not PR-01). Tracked in [`GAPS.md`](./GAPS.md) as G-01.  
+1. **Production tile source** — **decided KD-43 / G-01:** self-hosted TileServer GL + Qatar extract.  
 2. **Exact cloud region / residency** for production (KD-30 default; legal confirm). **Blocks first external-client data** (G-02).  
 3. **SSO later** (Azure AD/Google) for Flaha staff? Post-R2 (G-03).  
 4. **App distribution:** private MDM vs store? Needed before inspector devices leave staging (G-04).  

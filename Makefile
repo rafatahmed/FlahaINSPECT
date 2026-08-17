@@ -25,7 +25,8 @@ endif
 	api-dev web-dev worker-dev dev \
 	mobile-bootstrap mobile-bootstrap-android mobile-get mobile-generate mobile-analyze mobile-test \
 	mobile-run mobile-run-android mobile-run-windows mobile-doctor \
-	up down logs ps smoke migrate migrate-twice seed
+	up down logs ps smoke migrate migrate-twice seed \
+	tiles-prepare tiles-up
 
 help:
 	@echo "FlahaINSPECT targets"
@@ -38,6 +39,7 @@ help:
 	@echo "  make mobile-run | mobile-run-android | mobile-run-windows | mobile-doctor"
 	@echo "  make up | down | logs | ps | smoke"
 	@echo "  make migrate | migrate-twice | seed"
+	@echo "  make tiles-prepare | tiles-up   G-01 TileServer GL (Qatar extract)"
 
 install:
 	$(PNPM) install
@@ -124,3 +126,9 @@ migrate-twice:
 
 seed:
 	$(PNPM) --filter @flaha/inspect-api db:seed
+
+tiles-prepare:
+	pwsh -File infra/tiles/prepare-qatar.ps1
+
+tiles-up:
+	$(COMPOSE) --profile tiles up -d tiles

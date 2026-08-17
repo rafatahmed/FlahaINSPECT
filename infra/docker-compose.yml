@@ -167,6 +167,19 @@ services:
       TUSD_INCOMPLETE_HOURS: ${TUSD_INCOMPLETE_HOURS:-48}
     networks: [flaha]
 
+  # G-01 / KD-43. Opt-in: docker compose --profile tiles
+  # Needs infra/tiles/data/qatar.mbtiles (make tiles-prepare). Not public OSM.
+  tiles:
+    profiles: [tiles]
+    image: maptiler/tileserver-gl:v4.15.3
+    restart: unless-stopped
+    command: ["--port", "8080", "--verbose"]
+    volumes:
+      - ./tiles/data:/data:ro
+    ports:
+      - "${TILE_PORT:-8082}:8080"
+    networks: [flaha]
+
 networks:
   flaha:
     driver: bridge

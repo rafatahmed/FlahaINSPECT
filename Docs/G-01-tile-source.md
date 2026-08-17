@@ -1,11 +1,11 @@
 # G-01 — Tile source for staging / pilot / production
 
-**Status:** `open` (decision brief, not a decision)  
+**Status:** `decided` (option 8 — self-hosted TileServer GL + Qatar extract; **KD-43**)  
 **Owner:** Platform (Rafat) + whoever signs the invoice / license  
 **Unblocks:** R2-13 FMTC offline pack, R2 exit criterion 3, O-8  
 **Does not unblock:** anything else in R2 (reports, metrics, AR keys are already merged)
 
-This file frames the **only remaining R2 hard external blocker**. It does not pick a vendor. Closing G-01 is a one-paragraph decision plus the filled **closure form** at the bottom, then a changelog line and a `GAPS.md` status flip.
+**Decision (2026-08-17):** option **8** — self-hosted TileServer GL + Qatar extract (**KD-43**). This file keeps the rejected alternatives and the closure form.
 
 Design of record: [Technical Design (MVP)](./FlahaINSPECT%20-%20Technical%20Design%20(MVP).md) Maps Design + KD-9 + KD-35.  
 Policy already locked: [GAPS.md](./GAPS.md) R0-05 / KD-35.  
@@ -135,11 +135,7 @@ Keep ambient-only maps. Capture already works with radio off (markers + grey can
 
 ## 5. Recommended path (not a decision)
 
-**Close G-01 on Option A (streets, written offline clause) for the first internal project**, implement R2-13, measure pack size on a real 10–20 ha site.
-
-**In parallel, price Option B or C satellite** only for the one site that actually needs it. Do not block R2-13 on satellite procurement.
-
-If no vendor will put “offline prefetch” in writing within a week, **fall to Option C streets** (Qatar extract). That is still a valid G-01 close.
+**Chosen: option 8 / C-class** — TileServer GL + Qatar extract. R2-13 implements FMTC against `TILE_PROVIDER_URL`. Satellite (option 10) can be a later overlay without reopening KD-43.
 
 Do **not** set `TILE_PROVIDER_URL` to `https://tile.openstreetmap.org/{z}/{x}/{y}.png` and call G-01 done. The gate will refuse bulk; a device build that ignored the gate would violate OSMF tile policy.
 
@@ -165,16 +161,18 @@ Estimated pack: **20–80 MB** streets z12–17 for 5–50 ha. Satellite at z17 
 Copy into the PR that marks G-01 decided (or into `.env.example` comments + this section).
 
 ```text
-Provider name:
-Style (streets / satellite / hybrid):
-TILE_PROVIDER_URL (template, no secrets in git if the key is live):
-TILE_PROVIDER_ATTRIBUTION:
-TILE_PROVIDER_USER_AGENT (default FlahaINSPECT/1.0 unless vendor requires otherwise):
-Written offline/bulk permission (link, ticket, or quote):
-Zoom allowed (must include 12–17):
-Staging and pilot use the same source? (yes/no + exception):
-Who pays / account owner:
-Review date:
+Provider name: Self-hosted TileServer GL (maptiler/tileserver-gl) + Qatar extract
+Style (streets / satellite / hybrid): streets (OpenStreetMap / OpenMapTiles schema)
+TILE_PROVIDER_URL: http://127.0.0.1:8082/styles/basic-preview/{z}/{x}/{y}.png
+  (emulator: http://10.0.2.2:8082/styles/basic-preview/{z}/{x}/{y}.png)
+  (staging/pilot: same image behind an internal host)
+TILE_PROVIDER_ATTRIBUTION: © OpenStreetMap contributors
+TILE_PROVIDER_USER_AGENT: FlahaINSPECT/1.0
+Written offline/bulk permission: we serve our own pack (ODbL on the data; not OSMF tile servers)
+Zoom allowed (must include 12–17): yes (Planetiler / TileServer GL)
+Staging and pilot use the same source?: yes
+Who pays / account owner: Flaha (compute only; Geofabrik PBF is ODbL)
+Review date: 2026-08-17
 ```
 
 Then, same commit:

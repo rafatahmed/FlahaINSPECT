@@ -14,7 +14,9 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
-- G-01 decision brief: [Docs/G-01-tile-source.md](Docs/G-01-tile-source.md) (vendor vs self-host; does not pick a source yet).
+- G-01 **decided** (KD-43): self-hosted TileServer GL + Qatar extract (`infra/tiles/`, compose profile `tiles`). Not public OSM. Unblocks R2-13.
+
+- G-01 decision brief: [Docs/G-01-tile-source.md](Docs/G-01-tile-source.md).
 
 - EN/AR resource keys + capture polish (PR-17 / R2-17): ARB catalogs (`app_en.arb` / `app_ar.arb`) and web `messages.ts`; UI stays English (no login language toggle); RTL policy for `ar`; high-contrast capture category buttons and always-visible GPS accuracy.
 
