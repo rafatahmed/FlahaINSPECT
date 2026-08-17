@@ -1,0 +1,250 @@
+openapi: 3.0.3
+info:
+  title: FlahaINSPECT API
+  version: 0.1.0
+  description: |
+    MVP API. Auth paths land in PR-04. Remaining resources are added in later PRs.
+    Error envelope is always `{ "error": { "code", "message", "details?" } }`.
+servers:
+  - url: /v1
+    description: Versioned API
+tags:
+  - name: Auth
+paths:
+  /auth/login:
+    post:
+      operationId: login
+      tags: [Auth]
+      summary: Email/password login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Session issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /auth/refresh:
+    post:
+      operationId: refresh
+      tags: [Auth]
+      summary: Rotate refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New access and refresh tokens
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [Auth]
+      summary: Revoke a refresh-token family
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '204':
+          description: Revoked or already gone
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [Auth]
+      summary: Current user plus min_app_version
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Caller profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/set-password:
+    post:
+      operationId: setPassword
+      tags: [Auth]
+      summary: Manager sets a user password (bumps token_version, revokes refresh families)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetPasswordRequest'
+      responses:
+        '200':
+          description: Password replaced
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [user]
+                properties:
+                  user:
+                    $ref: '#/components/schemas/PublicUser'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum:
+                - VALIDATION_ERROR
+                - UNAUTHORIZED
+                - TOKEN_REUSE_DETECTED
+                - FORBIDDEN
+                - NOT_FOUND
+                - CONFLICT_VERSION
+                - CONFLICT_IDEMPOTENCY
+                - PAYLOAD_TOO_LARGE
+                - PHOTO_PARENT_MISSING
+                - PHOTO_NOT_REGISTERED
+                - HASH_MISMATCH
+                - PHOTO_ALREADY_EXISTS
+                - REPORT_IN_PROGRESS
+                - PROJECT_ARCHIVED
+                - TEXT_TOO_LONG
+                - RATE_LIMITED
+                - ACCOUNT_LOCKED
+                - DEPENDENCY_UNAVAILABLE
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    RefreshRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+    SetPasswordRequest:
+      type: object
+      required: [user_id, new_password]
+      properties:
+        user_id:
+          type: string
+          format: uuid
+        new_password:
+          type: string
+          minLength: 10
+    PublicUser:
+      type: object
+      required: [id, email, full_name, role, locale, is_active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+        full_name:
+          type: string
+        role:
+          type: string
+          enum: [inspector, manager, client]
+        locale:
+          type: string
+        is_active:
+          type: boolean
+    SessionResponse:
+      type: object
+      required: [access_token, refresh_token, expires_in, user]
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        expires_in:
+          type: integer
+          description: Access token lifetime in seconds (900)
+        user:
+          $ref: '#/components/schemas/PublicUser'
+    MeResponse:
+      type: object
+      required: [user, min_app_version, server_time]
+      properties:
+        user:
+          $ref: '#/components/schemas/PublicUser'
+        min_app_version:
+          type: string
+        server_time:
+          type: string
+          format: date-time
+  responses:
+    Unauthorized:
+      description: Missing/invalid token or bad credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    Forbidden:
+      description: Role or membership denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    NotFound:
+      description: Unknown id
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+    RateLimited:
+      description: RATE_LIMITED or ACCOUNT_LOCKED
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
