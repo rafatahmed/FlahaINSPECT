@@ -13,6 +13,7 @@ tags:
   - name: Users
   - name: Projects
   - name: Inspections
+  - name: Photos
 paths:
   /auth/login:
     post:
@@ -364,6 +365,51 @@ paths:
       responses:
         '200':
           description: Soft-deleted
+  /photos:
+    post:
+      operationId: registerPhoto
+      tags: [Photos]
+      security: [{ bearerAuth: [] }]
+      summary: Register photo metadata and mint a TUS upload_token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [client_uuid, inspection_point_client_uuid, project_id, sha256, byte_size]
+              properties:
+                client_uuid: { type: string, format: uuid }
+                inspection_point_client_uuid: { type: string, format: uuid }
+                project_id: { type: string, format: uuid }
+                sha256: { type: string, pattern: '^[0-9a-fA-F]{64}$' }
+                byte_size: { type: integer, minimum: 1, maximum: 26214400 }
+                content_type: { type: string, enum: [image/jpeg, image/png] }
+                width_px: { type: integer }
+                height_px: { type: integer }
+                original_filename: { type: string, maxLength: 255 }
+      responses:
+        '200':
+          description: Re-entry (KD-34 keeps tus_upload_id on same hash)
+        '201':
+          description: Created pending_upload + upload_token (2h)
+        '409':
+          description: PHOTO_ALREADY_EXISTS or CONFLICT_IDEMPOTENCY
+        '422':
+          description: PHOTO_PARENT_MISSING
+  /photos/{id}:
+    get:
+      operationId: getPhoto
+      tags: [Photos]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Metadata + 10-minute signed URLs (audit photo.url_issue)
 components:
   securitySchemes:
     bearerAuth:

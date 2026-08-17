@@ -21,7 +21,7 @@ This file is the implementation plan you track against. Do not invent a second p
 
 **Status values:** `not-started` · `in-progress` · `blocked` · `done` · `deferred`
 
-**Current release in progress:** **R1** (branch `feat/pr-06-inspection-points`). R0 tag: `r0-design-freeze`. R1-01–R1-05 merged.
+**Current release in progress:** **R1** (branch `feat/pr-07-photos-tus`). R0 tag: `r0-design-freeze`. R1-01–R1-06 merged.
 
 ---
 
@@ -114,8 +114,8 @@ Dependencies are hard. Do not start a row whose deps are not `done`.
 | R1-03 | PR-03 | Drizzle + raw SQL schema, triggers, seeds | R1-02 | `done` | Migration applies twice (expand-safe); seed uses `SEED_PASSWORD`; unique active-report index |
 | R1-04 | PR-04 | Auth + OpenAPI + error catalog | R1-03 | `done` | Login/refresh/logout/me/set-password; rotation + reuse revoke; `ver`; lockout; set-password revokes families |
 | R1-05 | PR-05 | Users, projects, memberships, api-client | R1-04 | `done` | Manager CRUD; inspector list assigned; bbox from boundary; archive vs soft-delete |
-| R1-06 | PR-06 | Inspection points API | R1-05 | `in-progress` | Idempotent create KD-31; manager PATCH only remarks/procedure/status; KD-40 lengths |
-| R1-07 | PR-07 | Photos + TUS hooks + thumbs | R1-06, R1-02 | `not-started` | State table + **KD-34**; parent `updated_at` bump; private hooks |
+| R1-06 | PR-06 | Inspection points API | R1-05 | `done` | Idempotent create KD-31; manager PATCH only remarks/procedure/status; KD-40 lengths |
+| R1-07 | PR-07 | Photos + TUS hooks + thumbs | R1-06, R1-02 | `in-progress` | State table + **KD-34**; parent `updated_at` bump; private hooks |
 | R1-08 | PR-08 | Keyset delta freeze | R1-06, R1-07 | `not-started` | KD-38; OpenAPI frozen for mobile; `PROJECT_ARCHIVED` |
 | R1-10 | PR-10 | Mobile Drift, secure login, project list | R1-04, R1-05 | `not-started` | Wireframe 01+02; no tokens in Drift |
 | R1-11 | PR-11 | Capture + GPS + one photo + outbox | R1-10 | `not-started` | Wireframe 04; EXIF GPS strip; create-once |

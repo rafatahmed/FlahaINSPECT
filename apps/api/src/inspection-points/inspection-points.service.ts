@@ -6,11 +6,15 @@ import { ErrorCode } from '../common/errors';
 import type { Db } from '../db/client';
 import { inspectionPoints, photos, projectMembers, projects } from '../db/schema';
 import { projectAccess } from '../projects/project-access';
+import { StorageService } from '../storage/storage.service';
 import { allowlistDeviceInfo, fieldPayloadEqual } from './field-payload';
 
 @Injectable()
 export class InspectionPointsService {
-  constructor(@Inject('DB') private readonly db: Db) {}
+  constructor(
+    @Inject('DB') private readonly db: Db,
+    private readonly storage: StorageService,
+  ) {}
 
   async create(actor: AuthUser, input: CreateInput) {
     const project = await this.loadProject(input.project_id);
@@ -275,15 +279,21 @@ export class InspectionPointsService {
       outside_boundary: row.outsideBoundary,
       captured_at: row.capturedAt.toISOString(),
       version: row.version,
-      photos: photoRows.map((p) => ({
-        id: p.id,
-        client_uuid: p.clientUuid,
-        status: p.status,
-        thumbnail_url: null,
-        thumbnail_url_expires_in: null,
-        url: null,
-        url_expires_in: null,
-      })),
+      photos: await Promise.all(
+        photoRows.map(async (p) => {
+          const full = p.status === 'ready' ? await this.storage.signedGet(p.storageKey) : null;
+          const thumb = p.status === 'ready' ? await this.storage.signedGet(p.thumbnailKey) : null;
+          return {
+            id: p.id,
+            client_uuid: p.clientUuid,
+            status: p.status,
+            thumbnail_url: thumb?.url ?? null,
+            thumbnail_url_expires_in: thumb?.expires_in ?? null,
+            url: full?.url ?? null,
+            url_expires_in: full?.expires_in ?? null,
+          };
+        }),
+      ),
     };
   }
 }
