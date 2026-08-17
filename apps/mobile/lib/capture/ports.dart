@@ -24,4 +24,6 @@ abstract class PhotoFiles {
     required Uint8List upload,
     required Uint8List thumb,
   });
+
+  Future<Uint8List> readUpload(String path);
 }

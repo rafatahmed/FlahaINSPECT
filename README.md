@@ -13,7 +13,7 @@ Field inspectors capture geotagged photos with a single category (**Defect** / *
 | Item | State |
 |------|--------|
 | Product name | **FlahaINSPECT** |
-| Repository | R1 in progress — R1-01–R1-08 + R1-10 merged; R1-11 on `feat/pr-11-capture` |
+| Repository | R1 in progress — R1-01–R1-11 on main (or merging); R1-12 on `feat/pr-12-sync-tus` |
 | Current release | **R1 in progress** — R0 tag `r0-design-freeze` |
 | Design of record | [`Docs/FlahaINSPECT - Technical Design (MVP).md`](Docs/FlahaINSPECT%20-%20Technical%20Design%20(MVP).md) |
 | Plan / tracking | [`Docs/ROADMAP.md`](Docs/ROADMAP.md) |

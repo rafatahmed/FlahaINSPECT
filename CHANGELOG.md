@@ -14,6 +14,10 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- Outbox sync + TUS (PR-12 / R1-12): Sync now, Wi-Fi only, 2 MiB resumable PATCH, backoff, keyset pull after push.
+
+### Added (earlier)
+
 - Capture flow (PR-11 / R1-11): GPS soft-warn, pre-save pin adjust, one photo, 1920 JPEG 80 + EXIF strip, create-once outbox (`CreateInspectionPoint` + `UploadPhoto`).
 
 ### Added (earlier)
@@ -66,6 +70,7 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 - R1-07 marked **done** after merge of PR #19.
 - R1-08 marked **done** after merge of PR #20.
 - R1-10 marked **done** after merge of PR #21.
+- R1-11 marked **done** after merge of PR #22.
 
 ---
 
