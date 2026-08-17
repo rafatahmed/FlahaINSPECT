@@ -106,6 +106,19 @@ export function createInspectClient(options: InspectClientOptions) {
     removeProjectMember: (id: string, userId: string) =>
       request<{ ok: true }>('DELETE', `/projects/${id}/members/${userId}`),
     getProjectStats: (id: string) => request<Record<string, unknown>>('GET', `/projects/${id}/stats`),
+    createInspectionPoint: (body: Record<string, unknown>) =>
+      request<{ point: unknown }>('POST', '/inspection-points', body),
+    listInspectionPoints: (projectId: string, query?: Record<string, string>) => {
+      const qs = new URLSearchParams({ project_id: projectId, ...query }).toString();
+      return request<{ items: unknown[] }>('GET', `/inspection-points?${qs}`);
+    },
+    getInspectionPoint: (id: string) => request<{ point: unknown }>('GET', `/inspection-points/${id}`),
+    getInspectionPointByClient: (clientUuid: string) =>
+      request<{ point: unknown }>('GET', `/inspection-points/by-client/${clientUuid}`),
+    patchInspectionPoint: (id: string, body: Record<string, unknown>) =>
+      request<{ point: unknown }>('PATCH', `/inspection-points/${id}`, body),
+    deleteInspectionPoint: (id: string) =>
+      request<{ ok: true }>('DELETE', `/inspection-points/${id}`),
   };
 }
 
