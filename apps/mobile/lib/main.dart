@@ -2,8 +2,12 @@ import 'package:flaha_inspect/api/inspect_api.dart';
 import 'package:flaha_inspect/app.dart';
 import 'package:flaha_inspect/auth/secure_session_store.dart';
 import 'package:flaha_inspect/data/auth_repository.dart';
+import 'package:flaha_inspect/data/capture_repository.dart';
 import 'package:flaha_inspect/data/project_repository.dart';
 import 'package:flaha_inspect/db/app_database.dart';
+import 'package:flaha_inspect/features/projects/project_home.dart';
+import 'package:flaha_inspect/platform/device_ports.dart';
+import 'package:flaha_inspect/platform/io_photo_files.dart';
 import 'package:flutter/material.dart';
 
 const appVersion = '0.0.1';
@@ -26,6 +30,12 @@ void main() {
         appVersion: appVersion,
       ),
       projects: ProjectRepository(db: db, api: api),
+      capture: CaptureBindings(
+        capture: CaptureRepository(db: db, files: IoPhotoFiles(), appVersion: appVersion),
+        location: GeolocatorSource(),
+        photos: ImagePickerSource(),
+        disk: UnknownDiskSpace(),
+      ),
     ),
   );
 }

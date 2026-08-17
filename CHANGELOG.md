@@ -14,6 +14,10 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- Capture flow (PR-11 / R1-11): GPS soft-warn, pre-save pin adjust, one photo, 1920 JPEG 80 + EXIF strip, create-once outbox (`CreateInspectionPoint` + `UploadPhoto`).
+
+### Added (earlier)
+
 - Mobile Drift schema, Keychain/Keystore session store (KD-37), login, assigned project list (PR-10 / R1-10). Flutter SDK pin + committed Drift codegen.
 
 ### Added (earlier)
@@ -61,6 +65,7 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 - R1-06 marked **done** after merge of PR #18.
 - R1-07 marked **done** after merge of PR #19.
 - R1-08 marked **done** after merge of PR #20.
+- R1-10 marked **done** after merge of PR #21.
 
 ---
 

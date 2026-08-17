@@ -2,6 +2,7 @@ import 'package:flaha_inspect/auth/login_copy.dart';
 import 'package:flaha_inspect/data/auth_repository.dart';
 import 'package:flaha_inspect/data/project_repository.dart';
 import 'package:flaha_inspect/features/login/login_screen.dart';
+import 'package:flaha_inspect/features/projects/project_home.dart';
 import 'package:flaha_inspect/features/projects/projects_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -11,11 +12,13 @@ class FlahaInspectApp extends StatefulWidget {
     required this.auth,
     required this.projects,
     this.online = true,
+    this.capture,
   });
 
   final AuthGateway auth;
   final ProjectCatalog projects;
   final bool online;
+  final CaptureBindings? capture;
 
   @override
   State<FlahaInspectApp> createState() => _FlahaInspectAppState();
@@ -93,6 +96,7 @@ class _FlahaInspectAppState extends State<FlahaInspectApp> {
     return ProjectsScreen(
       projects: widget.projects,
       online: widget.online,
+      capture: widget.capture,
       onLogout: () async {
         await widget.auth.logout();
         if (!mounted) return;
