@@ -4,6 +4,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { CopyObjectCommand } from '@aws-sdk/client-s3';
 
 const SIGNED_TTL_SECONDS = 600;
+const REPORT_TTL_SECONDS = 3600;
 
 @Injectable()
 export class StorageService {
@@ -26,7 +27,10 @@ export class StorageService {
         : null;
   }
 
-  async signedGet(key: string | null | undefined): Promise<{
+  async signedGet(
+    key: string | null | undefined,
+    ttlSeconds = SIGNED_TTL_SECONDS,
+  ): Promise<{
     url: string;
     expires_in: number;
   } | null> {
@@ -34,9 +38,13 @@ export class StorageService {
     const url = await getSignedUrl(
       this.client,
       new GetObjectCommand({ Bucket: this.bucket, Key: key }),
-      { expiresIn: SIGNED_TTL_SECONDS },
+      { expiresIn: ttlSeconds },
     );
-    return { url, expires_in: SIGNED_TTL_SECONDS };
+    return { url, expires_in: ttlSeconds };
+  }
+
+  signedReportGet(key: string | null | undefined) {
+    return this.signedGet(key, REPORT_TTL_SECONDS);
   }
 
   async headSize(key: string): Promise<number | null> {

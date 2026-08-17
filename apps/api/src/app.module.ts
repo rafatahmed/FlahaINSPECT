@@ -5,6 +5,7 @@ import { HealthModule } from './health/health.module';
 import { InspectionPointsModule } from './inspection-points/inspection-points.module';
 import { PhotosModule } from './photos/photos.module';
 import { ProjectsModule } from './projects/projects.module';
+import { ReportsModule } from './reports/reports.module';
 import { StorageModule } from './storage/storage.module';
 import { SyncModule } from './sync/sync.module';
 import { TusHooksModule } from './tus-hooks/tus-hooks.module';
@@ -20,6 +21,7 @@ import { UsersModule } from './users/users.module';
     ProjectsModule,
     InspectionPointsModule,
     PhotosModule,
+    ReportsModule,
     TusHooksModule,
     SyncModule,
   ],
