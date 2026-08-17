@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
+import { BrandMark } from '@/components/brand-mark';
 
 export function LoginForm() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export function LoginForm() {
 
   return (
     <form className="login" onSubmit={(e) => void onSubmit(e)}>
-      <h1>FlahaINSPECT</h1>
+      <BrandMark variant="color" height={96} />
       <label htmlFor="email">Email</label>
       <input id="email" name="email" type="email" autoComplete="username" required disabled={busy} />
       <label htmlFor="password">Password</label>

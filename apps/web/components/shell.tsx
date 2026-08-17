@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
+import { BrandMark } from '@/components/brand-mark';
 
 export function Shell({ children, email }: { children: ReactNode; email?: string }) {
   const path = usePathname();
@@ -15,7 +16,7 @@ export function Shell({ children, email }: { children: ReactNode; email?: string
   return (
     <div className="shell">
       <nav className="nav">
-        <strong>FlahaINSPECT</strong>
+        <BrandMark variant="white" height={56} />
         <Link className={path.startsWith('/dashboard') ? 'active' : ''} href="/dashboard">
           Dashboard
         </Link>

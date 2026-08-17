@@ -1,5 +1,6 @@
 import 'package:flaha_inspect/api/inspect_api.dart';
 import 'package:flaha_inspect/auth/login_copy.dart';
+import 'package:flaha_inspect/brand/brand_mark.dart';
 import 'package:flaha_inspect/data/auth_repository.dart';
 import 'package:flutter/material.dart';
 
@@ -68,13 +69,9 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 48),
-              const Text(
-                productName,
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
+              const Center(child: BrandMark(variant: BrandVariant.color, height: 120)),
+              const SizedBox(height: 32),
               TextField(
                 controller: _email,
                 keyboardType: TextInputType.emailAddress,

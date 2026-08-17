@@ -1,6 +1,9 @@
 import 'package:flaha_inspect/auth/login_copy.dart';
+import 'package:flaha_inspect/data/map_repository.dart';
 import 'package:flaha_inspect/data/project_repository.dart';
+import 'package:flaha_inspect/features/map/map_screen.dart';
 import 'package:flaha_inspect/features/projects/project_home.dart';
+import 'package:flaha_inspect/map/tile_policy.dart';
 import 'package:flutter/material.dart';
 
 class ProjectsScreen extends StatefulWidget {
@@ -11,6 +14,8 @@ class ProjectsScreen extends StatefulWidget {
     required this.onLogout,
     this.gpsLabel = 'GPS —',
     this.capture,
+    this.maps,
+    this.tiles,
   });
 
   final ProjectCatalog projects;
@@ -18,6 +23,8 @@ class ProjectsScreen extends StatefulWidget {
   final VoidCallback onLogout;
   final String gpsLabel;
   final CaptureBindings? capture;
+  final MapRepository? maps;
+  final TilePolicy? tiles;
 
   @override
   State<ProjectsScreen> createState() => _ProjectsScreenState();
@@ -104,6 +111,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                     itemBuilder: (context, i) => _ProjectTile(
                       item: items[i],
                       capture: widget.capture,
+                      maps: widget.maps,
+                      tiles: widget.tiles,
                     ),
                   ),
                 );
@@ -117,9 +126,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
 }
 
 class _ProjectTile extends StatelessWidget {
-  const _ProjectTile({required this.item, this.capture});
+  const _ProjectTile({required this.item, this.capture, this.maps, this.tiles});
   final ProjectListItem item;
   final CaptureBindings? capture;
+  final MapRepository? maps;
+  final TilePolicy? tiles;
 
   @override
   Widget build(BuildContext context) {
@@ -129,24 +140,26 @@ class _ProjectTile extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: ListTile(
-        title: Text(item.name),
+        title: Text(item.isArchived ? '${item.name}  ARCHIVED' : item.name),
         subtitle: Text(subtitle),
-        trailing: item.isArchived
-            ? const Text('ARCHIVED')
-            : TextButton(
+        trailing: TextButton(
                 onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => capture == null
+                  final page = (capture != null && maps != null && tiles != null)
+                      ? MapScreen(
+                          projectId: item.id,
+                          bindings: capture!,
+                          maps: maps!,
+                          tiles: tiles!,
+                        )
+                      : capture == null
                           ? Scaffold(
                               appBar: AppBar(title: Text(item.name)),
                               body: const Center(child: Text('Map — PR-13')),
                             )
-                          : ProjectHomeScreen(project: item, bindings: capture!),
-                    ),
-                  );
+                          : ProjectHomeScreen(project: item, bindings: capture!);
+                  Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
                 },
-                child: const Text('Open'),
+                child: Text(item.isArchived ? 'View' : 'Open'),
               ),
       ),
     );

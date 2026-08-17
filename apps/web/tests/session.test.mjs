@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -26,6 +26,16 @@ test('legend is category not status', () => {
   assert.match(src, /Normal/);
   assert.match(src, /Note/);
   assert.doesNotMatch(src, /Urgent/);
+});
+
+test('transparent brand marks are published for web', () => {
+  for (const name of ['logo-color.png', 'logo-black.png', 'logo-white.png']) {
+    assert.equal(existsSync(join(root, 'public/brand', name)), true);
+  }
+  const login = readFileSync(join(root, 'components/login-form.tsx'), 'utf8');
+  assert.match(login, /variant=\"color\"/);
+  const shell = readFileSync(join(root, 'components/shell.tsx'), 'utf8');
+  assert.match(shell, /variant=\"white\"/);
 });
 
 test('photo img src uses BFF not a signed S3 URL (KD-41)', () => {

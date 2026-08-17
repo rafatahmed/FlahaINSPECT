@@ -50,8 +50,8 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Al Khor farm'), findsOneWidget);
-    expect(find.text('ARCHIVED'), findsOneWidget);
+    expect(find.textContaining('Al Khor farm'), findsOneWidget);
+    expect(find.textContaining('ARCHIVED'), findsOneWidget);
     expect(find.text('Open'), findsNothing);
   });
 }

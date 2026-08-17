@@ -1,5 +1,6 @@
 import 'package:flaha_inspect/app.dart';
 import 'package:flaha_inspect/auth/login_copy.dart';
+import 'package:flaha_inspect/brand/brand_mark.dart';
 import 'package:flaha_inspect/data/auth_repository.dart';
 import 'package:flaha_inspect/data/project_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,7 +30,7 @@ void main() {
       FlahaInspectApp(auth: _Auth(), projects: _Projects()),
     );
     await tester.pumpAndSettle();
-    expect(find.text(productName), findsWidgets);
+    expect(find.byType(BrandMark), findsOneWidget);
     expect(find.text(loginButtonLabel), findsOneWidget);
   });
 }
