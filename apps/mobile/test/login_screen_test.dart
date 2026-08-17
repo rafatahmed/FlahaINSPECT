@@ -37,6 +37,8 @@ void main() {
     expect(find.text('Email'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.textContaining('Forgot'), findsNothing);
+    expect(find.textContaining('Language'), findsNothing);
+    expect(find.textContaining('العربية'), findsNothing);
   });
 
   testWidgets('shows generic failure copy', (tester) async {

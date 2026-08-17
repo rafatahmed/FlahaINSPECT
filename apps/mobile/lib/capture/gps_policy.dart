@@ -7,6 +7,12 @@ bool gpsNeedsSoftWarn(double? accuracyM) {
   return accuracyM > gpsSoftWarnMeters;
 }
 
+/// Always-visible accuracy chrome (wireframe 04).
+String formatGpsAccuracy(double? accuracyM) {
+  if (accuracyM == null) return 'GPS —';
+  return 'GPS ${accuracyM.toStringAsFixed(1)} m';
+}
+
 class GeoFix {
   const GeoFix({
     required this.latitude,

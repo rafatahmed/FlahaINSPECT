@@ -60,6 +60,9 @@ void main() {
     expect(find.text(saveLocallyLabel), findsOneWidget);
     expect(find.text(adjustPinLabel), findsOneWidget);
     expect(find.textContaining('second photo'), findsNothing);
+    expect(find.text(tapToCapture), findsOneWidget);
+    final defect = tester.getSize(find.widgetWithText(FilledButton, 'Defect'));
+    expect(defect.height, greaterThanOrEqualTo(64));
   });
 
   testWidgets('soft-warns when GPS is worse than 10 m', (tester) async {
@@ -98,7 +101,10 @@ void main() {
     );
     await tester.pump();
     expect(find.text(storageBlockCopy), findsOneWidget);
-    final button = tester.widget<FilledButton>(find.widgetWithText(FilledButton, saveLocallyLabel));
+    final save = find.byKey(const Key('capture-save'), skipOffstage: false);
+    await tester.ensureVisible(save);
+    await tester.pump();
+    final button = tester.widget<FilledButton>(save);
     expect(button.onPressed, isNull);
   });
 }

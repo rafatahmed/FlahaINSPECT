@@ -63,7 +63,7 @@ R0 exit: all rows above `done`. **PR-01 may start.**
 | G-03 | SSO (Azure AD / Google) | `open` | R3 |
 | G-06 | Enable `client` login / shared PDFs | `open` | R3 |
 | G-08 | Forensic originals (`store_originals`) | `decided` for R1/R2 = **no** | Revisit only if legal/sales require |
-| G-09 | Full Arabic field strings + RTL QA | scaffold in PR-17 | Complete language pack in R3 |
+| G-09 | Full Arabic field strings + RTL QA | scaffold in PR-17 (keys + RTL policy; UI locked EN) | Complete language pack in R3 |
 | G-10 | Manager correction of field `category` / `note` / location | `accepted-risk` | Create-once (KD-23). Wrong capture is permanent in R1/R2. |
 | G-11 | WorkManager / iOS BGTasks true background upload | `decided` out of R1/R2 | Foreground + Sync Now is the supported path |
 | G-12 | Per-project roles (`member_role` live) | `decided` unused | Schema kept; AuthZ ignores it |

@@ -7,6 +7,7 @@ import 'package:flaha_inspect/capture/ports.dart';
 import 'package:flaha_inspect/capture/storage_gate.dart';
 import 'package:flaha_inspect/data/capture_repository.dart';
 import 'package:flaha_inspect/features/capture/pin_adjust_screen.dart';
+import 'package:flaha_inspect/theme/field_contrast.dart';
 import 'package:flutter/material.dart';
 
 class CaptureScreen extends StatefulWidget {
@@ -115,72 +116,112 @@ class _CaptureScreenState extends State<CaptureScreen> {
   @override
   Widget build(BuildContext context) {
     final fix = _draft.fix;
-    final gpsLabel = fix == null
-        ? 'GPS —'
-        : 'GPS ${fix.accuracyM == null ? '—' : '${fix.accuracyM!.toStringAsFixed(1)} m'}';
+    final gpsLabel = formatGpsAccuracy(fix?.accuracyM);
+    final warn = gpsNeedsSoftWarn(fix?.accuracyM);
     final blocked = _storage == StorageVerdict.block || widget.archived;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text(captureTitle)),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          SizedBox(
-            height: 180,
-            child: Material(
-              color: Colors.black12,
-              child: InkWell(
-                onTap: blocked ? null : _takePhoto,
-                child: _draft.originalBytes == null
-                    ? const Center(child: Text('Tap to capture photo'))
-                    : Image.memory(_draft.originalBytes as Uint8List, fit: BoxFit.cover),
+    return Theme(
+      data: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: FieldContrast.canvas,
+        colorScheme: const ColorScheme.dark(
+          surface: FieldContrast.surface,
+          onSurface: FieldContrast.onCanvas,
+          primary: FieldContrast.note,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: FieldContrast.canvas,
+          foregroundColor: FieldContrast.onCanvas,
+        ),
+      ),
+      child: Scaffold(
+        appBar: AppBar(title: const Text(captureTitle)),
+        body: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            SizedBox(
+              height: 180,
+              child: Material(
+                color: FieldContrast.surface,
+                child: InkWell(
+                  onTap: blocked ? null : _takePhoto,
+                  child: _draft.originalBytes == null
+                      ? const Center(child: Text(tapToCapture))
+                      : Image.memory(_draft.originalBytes as Uint8List, fit: BoxFit.cover),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(gpsLabel),
-          if (gpsNeedsSoftWarn(fix?.accuracyM))
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text(gpsImpreciseBanner),
+            const SizedBox(height: 16),
+            Text(
+              gpsLabel,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+                color: warn ? FieldContrast.warn : FieldContrast.onCanvas,
+              ),
             ),
-          TextButton(
-            onPressed: fix == null || blocked ? null : _adjustPin,
-            child: const Text(adjustPinLabel),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: categoryLabels.entries
-                .map(
-                  (e) => ChoiceChip(
-                    label: Text(e.value),
-                    selected: _draft.category == e.key,
-                    onSelected: blocked
-                        ? null
-                        : (_) => setState(() => _draft = _draft.copyWith(category: e.key)),
+            if (warn)
+              const Padding(
+                padding: EdgeInsets.only(top: 8),
+                child: Text(
+                  gpsImpreciseBanner,
+                  style: TextStyle(color: FieldContrast.warn, fontSize: 16),
+                ),
+              ),
+            TextButton(
+              onPressed: fix == null || blocked ? null : _adjustPin,
+              child: const Text(adjustPinLabel),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: categoryLabels.entries.map((e) {
+                final selected = _draft.category == e.key;
+                final color = FieldContrast.categoryColor(e.key);
+                return Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: FieldContrast.categoryMinHeight),
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: selected ? color : FieldContrast.surface,
+                          foregroundColor: selected ? FieldContrast.canvas : color,
+                          side: BorderSide(color: color, width: selected ? 3 : 2),
+                        ),
+                        onPressed: blocked
+                            ? null
+                            : () => setState(() => _draft = _draft.copyWith(category: e.key)),
+                        child: Text(e.value, textAlign: TextAlign.center),
+                      ),
+                    ),
                   ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _note,
-            enabled: !blocked,
-            maxLength: noteMaxLength,
-            maxLines: 3,
-            decoration: const InputDecoration(labelText: notesLabel),
-          ),
-          if (_storage == StorageVerdict.warn) const Text(storageWarnCopy),
-          if (_storage == StorageVerdict.block) const Text(storageBlockCopy),
-          if (widget.archived) const Text(archivedNoCapture),
-          if (_error != null) Text(_error!),
-          const SizedBox(height: 16),
-          FilledButton(
-            onPressed: _busy || blocked ? null : _save,
-            child: Text(_busy ? '…' : saveLocallyLabel),
-          ),
-        ],
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _note,
+              enabled: !blocked,
+              maxLength: noteMaxLength,
+              maxLines: 3,
+              style: const TextStyle(color: FieldContrast.onCanvas),
+              decoration: const InputDecoration(
+                labelText: notesLabel,
+                labelStyle: TextStyle(color: FieldContrast.muted),
+              ),
+            ),
+            if (_storage == StorageVerdict.warn) const Text(storageWarnCopy),
+            if (_storage == StorageVerdict.block) const Text(storageBlockCopy),
+            if (widget.archived) const Text(archivedNoCapture),
+            if (_error != null) Text(_error!),
+            const SizedBox(height: 16),
+            FilledButton(
+              key: const Key('capture-save'),
+              onPressed: _busy || blocked ? null : _save,
+              child: Text(_busy ? '…' : saveLocallyLabel),
+            ),
+          ],
+        ),
       ),
     );
   }

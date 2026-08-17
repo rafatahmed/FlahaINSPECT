@@ -111,7 +111,9 @@ CI: `.github/workflows/ci.yml` job `flutter sibling` clones the pin from `github
 
 ## Capture (PR-11)
 
-Create-once: one photo + category required. GPS accuracy soft-warns above 10 m. Pin adjust is pre-save only. Save writes point + photo + `CreateInspectionPoint` + `UploadPhoto` in one Drift transaction. Upload candidate is 1920px JPEG 80 with GPS EXIF stripped (KD-8 / KD-36).
+Create-once: one photo + category required. GPS accuracy is always shown and soft-warns above 10 m. Category buttons are large and high-contrast. Pin adjust is pre-save only. Save writes point + photo + `CreateInspectionPoint` + `UploadPhoto` in one Drift transaction. Upload candidate is 1920px JPEG 80 with GPS EXIF stripped (KD-8 / KD-36).
+
+EN/AR keys live in `lib/l10n/app_*.arb`. The UI locale is locked to English (no login toggle). Arabic + RTL is a resource scaffold for R3 (G-09).
 
 ## API
 
