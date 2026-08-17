@@ -21,7 +21,7 @@ This file is the implementation plan you track against. Do not invent a second p
 
 **Status values:** `not-started` · `in-progress` · `blocked` · `done` · `deferred`
 
-**Current release in progress:** **R1** (branch `feat/pr-12-sync-tus`). R0 tag: `r0-design-freeze`. R1-01–R1-11 merged (R1-11 merge in flight).
+**Current release in progress:** **R1** (branch `feat/pr-14-web-bff`). R0 tag: `r0-design-freeze`. R1-01–R1-12 merged.
 
 ---
 
@@ -119,8 +119,8 @@ Dependencies are hard. Do not start a row whose deps are not `done`.
 | R1-08 | PR-08 | Keyset delta freeze | R1-06, R1-07 | `done` | KD-38; OpenAPI frozen for mobile; `PROJECT_ARCHIVED` |
 | R1-10 | PR-10 | Mobile Drift, secure login, project list | R1-04, R1-05 | `done` | Wireframe 01+02; no tokens in Drift |
 | R1-11 | PR-11 | Capture + GPS + one photo + outbox | R1-10 | `done` | Wireframe 04; EXIF GPS strip; create-once |
-| R1-12 | PR-12 | Sync worker + TUS (push then delta) | R1-07 (push), R1-08 (delta) | `in-progress` | Wireframe 05; resume after kill; Wi-Fi only |
-| R1-14 | PR-14 | Web BFF, map, editor | R1-04–R1-08 | `not-started` | Wireframe 06+07; KD-41 media; category legend |
+| R1-12 | PR-12 | Sync worker + TUS (push then delta) | R1-07 (push), R1-08 (delta) | `done` | Wireframe 05; resume after kill; Wi-Fi only |
+| R1-14 | PR-14 | Web BFF, map, editor | R1-04–R1-08 | `in-progress` | Wireframe 06+07; KD-41 media; category legend |
 
 **Parallelism that is actually safe**
 
