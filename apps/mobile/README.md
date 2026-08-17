@@ -72,7 +72,7 @@ flutter test
 flutter run --dart-define=API_BASE_URL=http://127.0.0.1:3001
 ```
 
-CI: `.github/workflows/ci.yml` job `flutter sibling` — pin + pub get + generate + dirty check + analyze + test. Not turbo.
+CI: `.github/workflows/ci.yml` job `flutter sibling` clones the pin from `github.com/flutter/flutter` (no `subosito/flutter-action` — that download was 429ing on `push`). Then pub get + generate + dirty check + analyze + test. Not turbo.
 
 ## Capture (PR-11)
 

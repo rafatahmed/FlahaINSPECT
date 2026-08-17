@@ -98,27 +98,38 @@ jobs:
   mobile:
     name: flutter sibling
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: apps/mobile
+    timeout-minutes: 20
+    env:
+      FLUTTER_ROOT: ${{ github.workspace }}/.tooling/flutter
     steps:
       - uses: actions/checkout@v4
       - name: Read Flutter pin
         id: flutter_pin
         run: echo "version=$(tr -d '\r\n' < apps/mobile/.flutter-version)" >> "$GITHUB_OUTPUT"
-      - uses: subosito/flutter-action@v2
+      - uses: actions/cache@v4
         with:
-          channel: stable
-          flutter-version: ${{ steps.flutter_pin.outputs.version }}
-          cache: true
+          path: ${{ env.FLUTTER_ROOT }}
+          key: flutter-${{ runner.os }}-${{ steps.flutter_pin.outputs.version }}
+      - name: Install pinned Flutter
+        run: |
+          set -euo pipefail
+          if [ ! -x "$FLUTTER_ROOT/bin/flutter" ]; then
+            git clone --depth 1 --branch "${{ steps.flutter_pin.outputs.version }}" \
+              https://github.com/flutter/flutter.git "$FLUTTER_ROOT"
+          fi
+          echo "$FLUTTER_ROOT/bin" >> "$GITHUB_PATH"
       - name: Pub get
+        working-directory: apps/mobile
         run: flutter pub get
       - name: Generate Drift
+        working-directory: apps/mobile
         run: dart run build_runner build
       - name: Generated Drift files must be committed
+        working-directory: apps/mobile
         run: git diff --exit-code
       - name: Analyze
+        working-directory: apps/mobile
         run: flutter analyze --no-fatal-infos
       - name: Test
+        working-directory: apps/mobile
         run: flutter test
