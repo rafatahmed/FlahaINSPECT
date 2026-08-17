@@ -6,6 +6,15 @@ import test from 'node:test';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 
+test('AR message keys match EN and login has no language toggle', () => {
+  const src = readFileSync(join(root, 'lib/messages.ts'), 'utf8');
+  assert.match(src, /lockedUiLocale = 'en'/);
+  assert.match(src, /rtlLocales/);
+  assert.match(src, /categoryDefect/);
+  const login = readFileSync(join(root, 'components/login-form.tsx'), 'utf8');
+  assert.doesNotMatch(login, /language|العربية|locale/i);
+});
+
 test('login BFF sets cookies and returns user only (KD-18)', () => {
   const src = readFileSync(join(root, 'app/bff/auth/login/route.ts'), 'utf8');
   assert.match(src, /httpOnly: true|cookieBase/);

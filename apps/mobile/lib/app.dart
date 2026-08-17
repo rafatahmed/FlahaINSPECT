@@ -5,6 +5,7 @@ import 'package:flaha_inspect/features/login/login_screen.dart';
 import 'package:flaha_inspect/data/map_repository.dart';
 import 'package:flaha_inspect/features/projects/project_home.dart';
 import 'package:flaha_inspect/features/projects/projects_screen.dart';
+import 'package:flaha_inspect/l10n/locale_policy.dart';
 import 'package:flaha_inspect/map/tile_policy.dart';
 import 'package:flutter/material.dart';
 
@@ -68,7 +69,15 @@ class _FlahaInspectAppState extends State<FlahaInspectApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: productName,
+      locale: lockedUiLocale,
+      supportedLocales: supportedAppLocales,
       home: _home(),
+      builder: (context, child) {
+        return Directionality(
+          textDirection: textDirectionFor(Localizations.localeOf(context)),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
     );
   }
 

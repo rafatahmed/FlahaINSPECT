@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 keyboardType: TextInputType.emailAddress,
                 autofillHints: const [AutofillHints.username, AutofillHints.email],
                 enabled: !_busy && !_blocked,
-                decoration: const InputDecoration(labelText: 'Email'),
+                decoration: const InputDecoration(labelText: emailLabel),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -85,7 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 obscureText: true,
                 autofillHints: const [AutofillHints.password],
                 enabled: !_busy && !_blocked,
-                decoration: const InputDecoration(labelText: 'Password'),
+                decoration: const InputDecoration(labelText: passwordLabel),
                 onSubmitted: (_) => _submit(),
               ),
               const SizedBox(height: 24),

@@ -14,6 +14,8 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- EN/AR resource keys + capture polish (PR-17 / R2-17): ARB catalogs (`app_en.arb` / `app_ar.arb`) and web `messages.ts`; UI stays English (no login language toggle); RTL policy for `ar`; high-contrast capture category buttons and always-visible GPS accuracy.
+
 - Hardening (PR-16 / R2-16): `GET /metrics` (HTTP, TUS, lag, job gauges); daily `gc_orphan_object` (48h orphans, G-05 12-month archive default); compose e2e login→point→tus→list→PDF; [Docs/ops/pilot-checklist.md](Docs/ops/pilot-checklist.md).
 
 - Web report UX (PR-15 / R2-15): Generate PDF, poll until ready/failed, 409 in-progress banner, download via `/bff/reports/:id/file`.

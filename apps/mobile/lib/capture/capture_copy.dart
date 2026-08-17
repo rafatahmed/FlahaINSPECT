@@ -1,4 +1,5 @@
 const captureTitle = 'Capture';
+const tapToCapture = 'Tap to capture photo';
 const saveLocallyLabel = 'Save locally';
 const adjustPinLabel = 'Adjust pin on map';
 const confirmPinLabel = 'Confirm';
