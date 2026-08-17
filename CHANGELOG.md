@@ -14,6 +14,10 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- Mobile Drift schema, Keychain/Keystore session store (KD-37), login, assigned project list (PR-10 / R1-10). Flutter SDK pin + committed Drift codegen.
+
+### Added (earlier)
+
 - Keyset delta sync (PR-08 / R1-08): `GET /sync/projects` and `GET /sync/projects/:id/points`. KD-38 split `items` / `deleted_ids`; OpenAPI freeze for mobile.
 
 ### Added (earlier)
@@ -56,6 +60,7 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 - R1-05 marked **done** after merge of PR #17.
 - R1-06 marked **done** after merge of PR #18.
 - R1-07 marked **done** after merge of PR #19.
+- R1-08 marked **done** after merge of PR #20.
 
 ---
 

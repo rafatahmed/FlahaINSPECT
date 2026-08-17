@@ -91,6 +91,7 @@ blob-report/
 # -----------------------------------------------------------------------------
 # Flutter / Dart (apps/mobile)
 # -----------------------------------------------------------------------------
+# Drift generated sources (lib/db/*.g.dart) ARE committed. Do not ignore *.g.dart.
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies
