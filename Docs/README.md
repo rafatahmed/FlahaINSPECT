@@ -12,6 +12,7 @@
 | 6 | [Ops / pilot checklist](./ops/pilot-checklist.md) | Backups, GC, flags, SLIs (PR-16). |
 | 7 | [G-01 tile source](./G-01-tile-source.md) | **Decided KD-43:** self-hosted TileServer GL + Qatar extract. |
 | 8 | [TileServer GL (Flaha-owned)](./ops/tileserver-gl.md) | What Flaha Agri Tech owns vs OSM ODbL; how to run the pack. |
+| 9 | [Local / internal pilot](./ops/local-pilot.md) | v1.0.0 runbook: compose, tiles, web, emulator. |
 
 ## Non-normative (do not implement from these)
 

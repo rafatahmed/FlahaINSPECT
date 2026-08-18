@@ -83,7 +83,7 @@ That command must keep the existing `lib/` and `test/` sources.
    Emulator → host API is **`http://10.0.2.2:3001`**. A USB device uses the PC LAN IP instead.  
    A `cmdline-tools\latest-2` warning is harmless if `latest` already existed.
 4. **Windows desktop (UI only):** `make mobile-run-windows` — login / projects / map. Camera + GPS need an Android device. Windows plugin builds need **Developer Mode**.
-5. Do **not** bulk-download public OSM. Dev map is ambient tiles only until G-01.
+5. Offline pack: start TileServer (`make tiles-prepare` / `make tiles-up`) then `make mobile-run-android` (passes Flaha `TILE_PROVIDER_URL` via `10.0.2.2:8082`). Full order: [Docs/ops/local-pilot.md](../../Docs/ops/local-pilot.md).
 
 `make mobile-run` still targets whatever `flutter devices` picks and uses `127.0.0.1` (desktop / Chrome).
 

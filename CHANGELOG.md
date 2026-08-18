@@ -14,7 +14,7 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
-- (none yet)
+- Local pilot runbook: [Docs/ops/local-pilot.md](Docs/ops/local-pilot.md). `make mobile-run-android` passes the Flaha TileServer `TILE_PROVIDER_URL`.
 
 ---
 

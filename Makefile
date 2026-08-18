@@ -91,15 +91,34 @@ mobile-analyze:
 mobile-test:
 	cd $(MOBILE) && $(FLUTTER) test
 
+# Flaha TileServer (KD-43). Override TILE_STYLE if the index at :8082 uses another id.
+TILE_STYLE ?= basic-preview
+TILE_ATTR ?= © OpenStreetMap contributors
+TILE_UA ?= FlahaINSPECT/1.0
+
 mobile-run:
-	cd $(MOBILE) && $(FLUTTER) run --dart-define=API_BASE_URL=http://127.0.0.1:3001
+	cd $(MOBILE) && $(FLUTTER) run \
+		--dart-define=API_BASE_URL=http://127.0.0.1:3001 \
+		--dart-define=TILE_PROVIDER_URL=http://127.0.0.1:8082/styles/$(TILE_STYLE)/{z}/{x}/{y}.png \
+		--dart-define=TILE_PROVIDER_ATTRIBUTION="$(TILE_ATTR)" \
+		--dart-define=TILE_PROVIDER_USER_AGENT=$(TILE_UA)
 
 # Android emulator reaches the host via 10.0.2.2 (not 127.0.0.1).
 mobile-run-android:
-	cd $(MOBILE) && $(FLUTTER) run -d android --dart-define=API_BASE_URL=http://10.0.2.2:3001 --dart-define=FLAVOR=dev
+	cd $(MOBILE) && $(FLUTTER) run -d android \
+		--dart-define=API_BASE_URL=http://10.0.2.2:3001 \
+		--dart-define=FLAVOR=dev \
+		--dart-define=TILE_PROVIDER_URL=http://10.0.2.2:8082/styles/$(TILE_STYLE)/{z}/{x}/{y}.png \
+		--dart-define=TILE_PROVIDER_ATTRIBUTION="$(TILE_ATTR)" \
+		--dart-define=TILE_PROVIDER_USER_AGENT=$(TILE_UA)
 
 mobile-run-windows:
-	cd $(MOBILE) && $(FLUTTER) run -d windows --dart-define=API_BASE_URL=http://127.0.0.1:3001 --dart-define=FLAVOR=dev
+	cd $(MOBILE) && $(FLUTTER) run -d windows \
+		--dart-define=API_BASE_URL=http://127.0.0.1:3001 \
+		--dart-define=FLAVOR=dev \
+		--dart-define=TILE_PROVIDER_URL=http://127.0.0.1:8082/styles/$(TILE_STYLE)/{z}/{x}/{y}.png \
+		--dart-define=TILE_PROVIDER_ATTRIBUTION="$(TILE_ATTR)" \
+		--dart-define=TILE_PROVIDER_USER_AGENT=$(TILE_UA)
 
 up:
 	$(COMPOSE) up -d --build
