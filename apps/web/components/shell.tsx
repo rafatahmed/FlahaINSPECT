@@ -5,7 +5,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import type { ReactNode } from 'react';
 import { BrandMark } from '@/components/brand-mark';
 
-export function Shell({ children, email }: { children: ReactNode; email?: string }) {
+import { mayOpen, type Account } from '@/lib/workspace';
+
+const navigation = [
+  ['/dashboard', 'Dashboard'], ['/projects', 'Projects'], ['/users', 'Users'],
+  ['/reports', 'Reports'], ['/client', 'Client workspace'],
+] as const;
+
+export function Shell({ children, account }: { children: ReactNode; account: Account }) {
   const path = usePathname();
   const router = useRouter();
   async function logout() {
@@ -17,22 +24,15 @@ export function Shell({ children, email }: { children: ReactNode; email?: string
     <div className="shell">
       <nav className="nav">
         <BrandMark variant="white" height={56} />
-        <Link className={path.startsWith('/dashboard') ? 'active' : ''} href="/dashboard">
-          Dashboard
-        </Link>
-        <Link className={path.startsWith('/projects') ? 'active' : ''} href="/projects">
-          Projects
-        </Link>
-        <Link className={path.startsWith('/users') ? 'active' : ''} href="/users">
-          Users
-        </Link>
-        <Link className={path.startsWith('/reports') ? 'active' : ''} href="/reports">
-          Reports
-        </Link>
+        {navigation.filter(([href]) => mayOpen(account.role, href)).map(([href, label]) => (
+          <Link key={href} className={path === href ? 'active' : ''} href={href}>
+            {href === '/projects' && account.role === 'inspector' ? 'Assigned projects' : label}
+          </Link>
+        ))}
       </nav>
       <div className="main">
         <div className="header">
-          <span className="muted">{email}</span>
+          <span className="muted">{account.email}</span>
           <button type="button" onClick={() => void logout()}>
             Log out
           </button>

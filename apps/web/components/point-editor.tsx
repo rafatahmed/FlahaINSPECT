@@ -23,7 +23,7 @@ type Point = {
   photos?: Photo[];
 };
 
-export function PointEditor({ point }: { point: Point }) {
+export function PointEditor({ point, canEdit }: { point: Point; canEdit: boolean }) {
   const router = useRouter();
   const photo = point.photos?.[0];
   const ready = photo?.status === 'ready';
@@ -66,7 +66,11 @@ export function PointEditor({ point }: { point: Point }) {
 
   async function remove() {
     if (!confirm('Soft-delete this point? It will leave the default map and list.')) return;
-    await fetch(`/bff/inspection-points/${point.id}`, { method: 'DELETE' });
+    const res = await fetch(`/bff/inspection-points/${point.id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      setError('Could not delete this point.');
+      return;
+    }
     router.push('/dashboard');
   }
 
@@ -93,25 +97,31 @@ export function PointEditor({ point }: { point: Point }) {
         <p className="muted">Outside boundary: {point.outside_boundary ? 'yes' : 'no'}</p>
         <label>Field note</label>
         <textarea readOnly value={point.note ?? ''} rows={4} />
-        <label>Remarks</label>
-        <textarea maxLength={4000} value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={4} />
-        <label>Recommended procedure</label>
-        <textarea maxLength={4000} value={procedure} onChange={(e) => setProcedure(e.target.value)} rows={4} />
-        <label>Status</label>
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <button type="button" disabled={busy} onClick={() => void save()}>
-          Save
-        </button>
-        <button type="button" onClick={() => void remove()}>
-          Soft-delete
-        </button>
-        {error ? <p className="error">{error}</p> : null}
+        {canEdit ? <>
+          <label>Remarks</label>
+          <textarea maxLength={4000} value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={4} />
+          <label>Recommended procedure</label>
+          <textarea maxLength={4000} value={procedure} onChange={(e) => setProcedure(e.target.value)} rows={4} />
+          <label>Status</label>
+          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <button type="button" disabled={busy} onClick={() => void save()}>
+            Save
+          </button>
+          <button type="button" onClick={() => void remove()}>
+            Soft-delete
+          </button>
+          {error ? <p className="error">{error}</p> : null}
+        </> : <dl>
+          <dt>Remarks</dt><dd>{point.remarks || 'None'}</dd>
+          <dt>Recommended procedure</dt><dd>{point.recommended_procedure || 'None'}</dd>
+          <dt>Status</dt><dd>{point.status}</dd>
+        </dl>}
       </section>
     </div>
   );

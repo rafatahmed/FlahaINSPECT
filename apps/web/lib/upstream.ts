@@ -1,35 +1,28 @@
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { isRole, mayUseStaffApi } from './workspace';
 import { API_PREFIX } from '@flaha/inspect-api-client';
-import { ACCESS_COOKIE, API_BASE, REFRESH_COOKIE, cookieBase } from './session';
+import {
+  ACCESS_COOKIE,
+  ACCESS_HEADER,
+  API_BASE,
+  PATHNAME_HEADER,
+  REFRESH_COOKIE,
+  applySessionCookies,
+  exchangeRefresh,
+  safeNextPath,
+} from './session';
 
-type CookieStore = Awaited<ReturnType<typeof cookies>>;
-
-async function refreshAccess(jar: CookieStore): Promise<string | null> {
-  const refresh = jar.get(REFRESH_COOKIE)?.value;
-  if (!refresh) return null;
-  const res = await fetch(`${API_BASE}${API_PREFIX}/auth/refresh`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ refresh_token: refresh }),
-  });
-  if (!res.ok) return null;
-  const json = (await res.json()) as {
-    access_token: string;
-    refresh_token: string;
-    expires_in: number;
-  };
-  jar.set(ACCESS_COOKIE, json.access_token, { ...cookieBase, maxAge: json.expires_in });
-  jar.set(REFRESH_COOKIE, json.refresh_token, { ...cookieBase, maxAge: 7 * 24 * 3600 });
-  return json.access_token;
-}
-
-export async function upstream(
+async function requestUpstream(
   method: string,
   path: string,
   body?: unknown,
+  opts?: { persistCookies?: boolean },
 ): Promise<{ status: number; json: unknown }> {
+  const persistCookies = opts?.persistCookies !== false;
   const jar = await cookies();
-  const token = jar.get(ACCESS_COOKIE)?.value;
+  const hdrs = await headers();
+  const token = (!persistCookies && hdrs.get(ACCESS_HEADER)) || jar.get(ACCESS_COOKIE)?.value;
   const send = (access?: string) =>
     fetch(`${API_BASE}${API_PREFIX}${path}`, {
       method,
@@ -42,9 +35,44 @@ export async function upstream(
 
   let res = await send(token ?? undefined);
   if (res.status === 401) {
-    const next = await refreshAccess(jar);
-    if (next) res = await send(next);
+    const refresh = jar.get(REFRESH_COOKIE)?.value;
+    if (!refresh) {
+      const json = await res.json().catch(() => null);
+      return { status: res.status, json };
+    }
+    // RSC cannot cookies().set — bounce through the BFF so rotation is persisted (KD-34).
+    if (!persistCookies) {
+      redirect(`/bff/auth/refresh?next=${encodeURIComponent(safeNextPath(hdrs.get(PATHNAME_HEADER)))}`);
+    }
+    const next = await exchangeRefresh(refresh);
+    if (next) {
+      applySessionCookies(jar, next);
+      res = await send(next.access_token);
+    }
   }
   const json = res.status === 204 ? null : await res.json().catch(() => null);
   return { status: res.status, json };
+}
+
+export async function staffApiDenial(method: string, path: string) {
+  const response = await requestUpstream('GET', '/auth/me');
+  if (response.status !== 200) return response;
+  const role = (response.json as { user?: { role?: unknown } } | null)?.user?.role;
+  if (!isRole(role) || !mayUseStaffApi(role, method, path)) {
+    return { status: 403, json: { error: { code: 'FORBIDDEN', message: 'Access denied' } } };
+  }
+  return null;
+}
+
+export async function upstream(method: string, path: string, body?: unknown) {
+  if (path !== '/auth/me') {
+    const denied = await staffApiDenial(method, path);
+    if (denied) return denied;
+  }
+  return requestUpstream(method, path, body);
+}
+
+/** For Server Components. Never writes cookies. */
+export function pageUpstream(method: string, path: string, body?: unknown) {
+  return requestUpstream(method, path, body, { persistCookies: false });
 }
