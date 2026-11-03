@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { BrandMark } from '@/components/brand-mark';
+import { afterLogin, isRole } from '@/lib/workspace';
 
 export function LoginForm({ next = '/dashboard' }: { next?: string }) {
   const router = useRouter();
@@ -24,15 +25,26 @@ export function LoginForm({ next = '/dashboard' }: { next?: string }) {
       }),
     });
     const json = (await res.json().catch(() => null)) as {
+      user?: { role?: unknown };
       error?: { code?: string; message?: string };
     } | null;
     setBusy(false);
     if (!res.ok) {
       const code = json?.error?.code;
-      setError(code === 'ACCOUNT_LOCKED' ? 'Try again in 15 minutes' : 'Email or password is incorrect.');
+      setError(
+        code === 'ACCOUNT_LOCKED'
+          ? 'Try again in 15 minutes'
+          : code === 'RATE_LIMITED'
+            ? 'Too many tries. Wait a minute and try again.'
+            : 'Email or password is incorrect.',
+      );
       return;
     }
-    router.push(next);
+    if (!isRole(json?.user?.role)) {
+      setError('Your account has no supported workspace.');
+      return;
+    }
+    router.replace(afterLogin(json.user.role, next));
     router.refresh();
   }
 

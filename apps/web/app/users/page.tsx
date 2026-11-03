@@ -1,16 +1,15 @@
+import { checkPageResponse, pageAccount } from '@/lib/page-account';
 import { Shell } from '@/components/shell';
-import { upstream } from '@/lib/upstream';
+import { pageUpstream } from '@/lib/upstream';
 
 export default async function UsersPage() {
-  const [{ json: meJson }, { json }] = await Promise.all([
-    upstream('GET', '/auth/me'),
-    upstream('GET', '/users'),
-  ]);
+  const account = await pageAccount('/users');
+  const { json, status } = await pageUpstream('GET', `/users`);
+  checkPageResponse(status);
   const items = ((json as { items?: Array<{ id: string; email: string; full_name: string; role: string }> } | null)
     ?.items ?? []) as Array<{ id: string; email: string; full_name: string; role: string }>;
-  const email = (meJson as { user?: { email?: string } } | null)?.user?.email;
   return (
-    <Shell email={email}>
+    <Shell account={account}>
       <h1>Users</h1>
       <table>
         <thead>

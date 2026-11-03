@@ -1,4 +1,5 @@
 import { LoginForm } from '@/components/login-form';
+import { safeNextPath } from '@/lib/session';
 
 export default async function LoginPage({
   searchParams,
@@ -6,5 +7,5 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const { next } = await searchParams;
-  return <LoginForm next={next && next.startsWith('/') ? next : '/dashboard'} />;
+  return <LoginForm next={safeNextPath(next)} />;
 }

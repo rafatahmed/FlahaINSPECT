@@ -27,9 +27,11 @@ type Point = MapPoint & {
 export function DashboardClient({
   projects,
   initialProjectId,
+  projectPath = '/dashboard',
 }: {
   projects: Project[];
   initialProjectId?: string;
+  projectPath?: '/projects' | '/dashboard';
 }) {
   const router = useRouter();
   const [projectId, setProjectId] = useState(initialProjectId ?? projects[0]?.id ?? '');
@@ -64,7 +66,7 @@ export function DashboardClient({
             value={projectId}
             onChange={(e) => {
               setProjectId(e.target.value);
-              router.replace(`/dashboard?project=${e.target.value}`);
+              router.replace(`${projectPath}?project=${e.target.value}`);
             }}
           >
             {projects.map((p) => (

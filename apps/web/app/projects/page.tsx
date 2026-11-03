@@ -1,17 +1,23 @@
+import { DashboardClient } from '@/components/dashboard-client';
+import { checkPageResponse, pageAccount } from '@/lib/page-account';
 import { Shell } from '@/components/shell';
-import { upstream } from '@/lib/upstream';
+import { pageUpstream } from '@/lib/upstream';
 
-export default async function ProjectsPage() {
-  const [{ json: meJson }, { json }] = await Promise.all([
-    upstream('GET', '/auth/me'),
-    upstream('GET', '/projects'),
-  ]);
+export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
+  const account = await pageAccount('/projects');
+  const { json, status } = await pageUpstream('GET', `/projects`);
+  checkPageResponse(status);
   const items = ((json as { items?: Array<{ id: string; name: string; is_archived?: boolean }> } | null)
     ?.items ?? []) as Array<{ id: string; name: string; is_archived?: boolean }>;
-  const email = (meJson as { user?: { email?: string } } | null)?.user?.email;
+  const selected = (await searchParams).project;
+  const inspector = account.role === 'inspector';
   return (
-    <Shell email={email}>
-      <h1>Projects</h1>
+    <Shell account={account}>
+      <h1>{inspector ? 'Assigned projects' : 'Projects'}</h1>
+      {items.length === 0 && <p>No projects assigned.</p>}
+      {inspector && selected && (items.some(p => p.id === selected)
+        ? <DashboardClient key={selected} projects={items} initialProjectId={selected} projectPath="/projects" />
+        : <p>This project is unavailable.</p>)}
       <table>
         <thead>
           <tr>
@@ -23,7 +29,7 @@ export default async function ProjectsPage() {
           {items.map((p) => (
             <tr key={p.id}>
               <td>
-                <a href={`/dashboard?project=${p.id}`}>{p.name}</a>
+                <a href={`${inspector ? '/projects' : '/dashboard'}?project=${p.id}`}>{p.name}</a>
               </td>
               <td>{p.is_archived ? 'yes' : 'no'}</td>
             </tr>

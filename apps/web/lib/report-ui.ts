@@ -42,3 +42,20 @@ export function stripDownloadUrl(report: Record<string, unknown>): Record<string
   delete rest.expires_in;
   return rest;
 }
+
+/** KD-41: browser must not receive long-lived signed MinIO URLs. */
+export function stripSignedMedia(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripSignedMedia);
+  if (!value || typeof value !== 'object') return value;
+  const rest = { ...(value as Record<string, unknown>) };
+  delete rest.url;
+  delete rest.thumbnail_url;
+  delete rest.url_expires_in;
+  delete rest.thumbnail_url_expires_in;
+  delete rest.download_url;
+  delete rest.expires_in;
+  if (rest.photos) rest.photos = stripSignedMedia(rest.photos);
+  if (rest.items) rest.items = stripSignedMedia(rest.items);
+  if (rest.point) rest.point = stripSignedMedia(rest.point);
+  return rest;
+}
