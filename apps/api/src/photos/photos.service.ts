@@ -153,6 +153,19 @@ export class PhotosService {
     return this.publicPhoto(row, true);
   }
 
+  async stream(actor: AuthUser, id: string, variant: 'thumb' | 'full') {
+    const row = await this.byId(id);
+    if (!row) throw new ApiException(ErrorCode.NOT_FOUND);
+    await this.assertProjectAccess(actor, row.projectId);
+    if (row.status !== 'ready') {
+      throw new ApiException(ErrorCode.NOT_FOUND, undefined, 'Photo still uploading');
+    }
+    const key = variant === 'thumb' ? row.thumbnailKey : row.storageKey;
+    const obj = await this.storage.getObject(key);
+    if (!obj) throw new ApiException(ErrorCode.NOT_FOUND, undefined, 'Photo still uploading');
+    return obj;
+  }
+
   async preCreate(headers: Record<string, string | undefined>, body: TusHookBody) {
     const upload = tusUploadFromHook(body);
     const token = uploadTokenFromHook(headers.authorization, body);

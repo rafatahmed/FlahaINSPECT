@@ -4,7 +4,6 @@ import { isRole, mayUseStaffApi } from './workspace';
 import { API_PREFIX } from '@flaha/inspect-api-client';
 import {
   ACCESS_COOKIE,
-  ACCESS_HEADER,
   API_BASE,
   PATHNAME_HEADER,
   REFRESH_COOKIE,
@@ -21,8 +20,8 @@ async function requestUpstream(
 ): Promise<{ status: number; json: unknown }> {
   const persistCookies = opts?.persistCookies !== false;
   const jar = await cookies();
-  const hdrs = await headers();
-  const token = (!persistCookies && hdrs.get(ACCESS_HEADER)) || jar.get(ACCESS_COOKIE)?.value;
+
+  const token = jar.get(ACCESS_COOKIE)?.value;
   const send = (access?: string) =>
     fetch(`${API_BASE}${API_PREFIX}${path}`, {
       method,
@@ -42,7 +41,7 @@ async function requestUpstream(
     }
     // RSC cannot cookies().set — bounce through the BFF so rotation is persisted (KD-34).
     if (!persistCookies) {
-      redirect(`/bff/auth/refresh?next=${encodeURIComponent(safeNextPath(hdrs.get(PATHNAME_HEADER)))}`);
+      redirect(`/bff/auth/refresh?next=${encodeURIComponent(safeNextPath((await headers()).get(PATHNAME_HEADER)))}`);
     }
     const next = await exchangeRefresh(refresh);
     if (next) {

@@ -1,55 +1,13 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import {
-  ACCESS_COOKIE,
-  ACCESS_HEADER,
-  PATHNAME_HEADER,
-  REFRESH_COOKIE,
-  applySessionCookies,
-  clearSessionCookies,
-  exchangeRefresh,
-} from './lib/session';
+import { PATHNAME_HEADER } from './lib/session';
 
-const PROTECTED = ['/dashboard', '/points', '/projects', '/users', '/reports', '/client', '/'];
-
-function loginRedirect(req: NextRequest, pathname: string) {
-  const login = req.nextUrl.clone();
-  login.pathname = '/login';
-  login.searchParams.set('next', pathname);
-  const res = NextResponse.redirect(login);
-  clearSessionCookies(res.cookies);
-  return res;
-}
-
-export async function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+// Page guards authorize with /auth/me. Keep the original deep link for a
+// relative refresh or login redirect, even behind a reverse proxy.
+export function middleware(req: NextRequest) {
   const requestHeaders = new Headers(req.headers);
-  requestHeaders.delete(ACCESS_HEADER);
-  requestHeaders.set(PATHNAME_HEADER, pathname);
-
-  if (!PROTECTED.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
-  }
-
-  const access = req.cookies.get(ACCESS_COOKIE)?.value;
-  const refresh = req.cookies.get(REFRESH_COOKIE)?.value;
-  if (!access && !refresh) {
-    return loginRedirect(req, pathname);
-  }
-
-  if (access) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
-  }
-
-  const tokens = await exchangeRefresh(refresh as string);
-  if (!tokens) {
-    return loginRedirect(req, pathname);
-  }
-
-  requestHeaders.set(ACCESS_HEADER, tokens.access_token);
-  const res = NextResponse.next({ request: { headers: requestHeaders } });
-  applySessionCookies(res.cookies, tokens);
-  return res;
+  requestHeaders.set(PATHNAME_HEADER, req.nextUrl.pathname + req.nextUrl.search);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 export const config = {
