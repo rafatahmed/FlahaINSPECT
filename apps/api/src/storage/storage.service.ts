@@ -1,3 +1,4 @@
+import type { Readable } from 'node:stream';
 import { Injectable } from '@nestjs/common';
 import { GetObjectCommand, HeadBucketCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -57,6 +58,25 @@ export class StorageService {
 
   signedReportGet(key: string | null | undefined) {
     return this.signedGet(key, REPORT_TTL_SECONDS);
+  }
+
+  async getObject(key: string | null | undefined): Promise<{
+    body: Readable;
+    contentType: string;
+    contentLength?: number;
+  } | null> {
+    if (!this.client || !this.bucket || !key) return null;
+    try {
+      const out = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+      if (!out.Body) return null;
+      return {
+        body: out.Body as Readable,
+        contentType: out.ContentType ?? 'application/octet-stream',
+        contentLength: out.ContentLength,
+      };
+    } catch {
+      return null;
+    }
   }
 
   async headSize(key: string): Promise<number | null> {

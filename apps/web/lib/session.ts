@@ -6,7 +6,6 @@ export const REFRESH_COOKIE = 'flaha_refresh';
 export const API_BASE = process.env.API_BASE_URL ?? 'http://127.0.0.1:3001';
 export const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 3600;
 export const PATHNAME_HEADER = 'x-flaha-pathname';
-export const ACCESS_HEADER = 'x-flaha-access';
 
 export const cookieBase = {
   httpOnly: true,
@@ -35,12 +34,7 @@ export function clearSessionCookies(jar: CookieWriter): void {
   jar.set(REFRESH_COOKIE, '', { ...cookieBase, maxAge: 0 });
 }
 
-export function safeNextPath(raw: string | null | undefined): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.includes('://') || raw.includes('\\')) {
-    return '/dashboard';
-  }
-  return raw;
-}
+export { safeNextPath } from './workspace';
 
 export async function exchangeRefresh(refreshToken: string): Promise<TokenPair | null> {
   const res = await fetch(`${API_BASE}${API_PREFIX}/auth/refresh`, {

@@ -8,7 +8,7 @@ const source = readFileSync(new URL('../lib/workspace.ts', import.meta.url), 'ut
 const { outputText } = ts.transpileModule(source, {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
 });
-const { afterLogin, mayOpen, mayUseStaffApi } = await import(
+const { afterLogin, mayOpen, mayUseStaffApi, safeNextPath } = await import(
   'data:text/javascript;base64,' + Buffer.from(outputText).toString('base64')
 );
 
@@ -27,7 +27,7 @@ test('each role gets its own landing and only permitted deep links', () => {
 
 test('inspectors can read assigned evidence through staff routes; clients cannot', () => {
   for (const path of ['/projects', '/projects/id/stats', '/inspection-points?project_id=id',
-    '/inspection-points/id', '/photos/id']) {
+    '/inspection-points/id', '/photos/id/file', '/photos/id/thumbnail']) {
     assert.equal(mayUseStaffApi('inspector', 'GET', path), true);
     assert.equal(mayUseStaffApi('client', 'GET', path), false);
   }
@@ -35,5 +35,17 @@ test('inspectors can read assigned evidence through staff routes; clients cannot
     ['PATCH', '/inspection-points/id'], ['DELETE', '/inspection-points/id']]) {
     assert.equal(mayUseStaffApi('inspector', method, path), false);
     assert.equal(mayUseStaffApi('manager', method, path), true);
+  }
+});
+
+test('refresh redirects keep permitted paths and queries on the browser origin', () => {
+  const base = 'https://app.example.test';
+  const deep = '/points/123?project=abc#photo';
+  assert.equal(safeNextPath(deep), deep);
+  for (const raw of ['https://outside.test', '//outside.test', '/\\outside.test',
+    '/\t/outside.test', '/dashboard/..//outside.test', '/bff/auth/logout']) {
+    const result = safeNextPath(raw);
+    assert.equal(result, '/');
+    assert.equal(new URL(result, base).origin, base);
   }
 });

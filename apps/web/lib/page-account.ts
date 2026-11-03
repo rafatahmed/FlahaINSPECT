@@ -1,10 +1,15 @@
+import { headers } from 'next/headers';
+import { PATHNAME_HEADER, safeNextPath } from './session';
 import { forbidden, redirect } from 'next/navigation';
 import { pageUpstream } from './upstream';
 import { isRole, mayOpen, type Account } from './workspace';
 
 export async function pageAccount(path?: string): Promise<Account> {
   const { status, json } = await pageUpstream('GET', '/auth/me');
-  if (status === 401) redirect('/login');
+  if (status === 401) {
+    const next = safeNextPath((await headers()).get(PATHNAME_HEADER));
+    redirect('/login?' + new URLSearchParams({ next }));
+  }
   if (status === 403) forbidden();
   if (status !== 200) throw new Error('Could not verify your account.');
   const user = (json as { user?: Account } | null)?.user;
