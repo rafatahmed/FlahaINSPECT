@@ -379,6 +379,77 @@ paths:
       responses:
         '200':
           description: Soft-deleted
+  /inspection-points/{id}/release:
+    post:
+      operationId: releaseFinding
+      tags: [Inspections]
+      summary: Release a ready observation to its project clients (manager)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version, summary]
+              properties:
+                version: { type: integer, minimum: 1 }
+                summary: { type: string, minLength: 1, maxLength: 4000 }
+      responses:
+        '201':
+          description: Released or identical release retried
+        '409':
+          description: Ineligible observation, stale version or conflicting release
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /client/projects/{id}/findings:
+    get:
+      operationId: listReleasedFindings
+      tags: [Inspections]
+      summary: List released findings for an assigned project (client)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Items containing approved summaries and capture locations
+        '404':
+          description: Resource unavailable to this client
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /client/findings/{id}:
+    get:
+      operationId: getReleasedFinding
+      tags: [Inspections]
+      summary: Read a released finding in an assigned project (client)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Finding containing id, project_id, summary, category and released_at
+        '404':
+          description: Resource unavailable to this client
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /client/findings/{id}/photo:
+    get:
+      operationId: getReleasedFindingPhoto
+      tags: [Inspections]
+      summary: Read the evidence for a visible released finding (client)
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Authenticated image stream with private no-store caching
+        '404':
+          description: Resource unavailable to this client
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /photos:
     post:
       operationId: registerPhoto
