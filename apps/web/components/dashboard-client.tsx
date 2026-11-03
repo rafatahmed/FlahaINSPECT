@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CATEGORY_LEGEND } from '@/lib/category';
 import { formatCapturedAt } from '@/lib/datetime';
 import type { MapPoint } from '@/lib/map-point';
@@ -36,26 +36,22 @@ export function DashboardClient({
   const router = useRouter();
   const [projectId, setProjectId] = useState(initialProjectId ?? projects[0]?.id ?? '');
   const [stats, setStats] = useState<Stats>({});
-  const [points, setPoints] = useState<Point[]>([]);
   const [category, setCategory] = useState('');
   const [status, setStatus] = useState('');
 
   useEffect(() => {
     if (!projectId) return;
-    const qs = new URLSearchParams({ project_id: projectId });
-    if (category) qs.set('category', category);
-    if (status) qs.set('status', status);
-    void Promise.all([
-      fetch(`/bff/projects/${projectId}/stats`).then((r) => r.json()),
-      fetch(`/bff/inspection-points?${qs}`).then((r) => r.json()),
-    ]).then(([s, list]) => {
-      setStats(s ?? {});
-      setPoints((list?.items ?? []) as Point[]);
-    });
-  }, [projectId, category, status]);
+    const controller = new AbortController();
+    setStats({});
+    void fetch(`/bff/projects/${projectId}/stats`, { signal: controller.signal })
+      .then((response) => response.ok ? response.json() : {})
+      .then((data) => { if (!controller.signal.aborted) setStats(data); })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [projectId]);
 
   const pendingPhotos = Math.max(0, (stats.point_count ?? 0) - (stats.photos_ready ?? 0));
-  const mapPoints = useMemo(() => points, [points]);
+
 
   return (
     <>
@@ -78,6 +74,7 @@ export function DashboardClient({
           </select>
         </label>
       </div>
+      <h2>Project totals</h2>
       <div className="cards">
         <div className="card">
           <span>Points</span>
@@ -100,26 +97,69 @@ export function DashboardClient({
           </span>
         ))}
       </div>
+      <div className="filters">
+        <select aria-label="Category" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <option value="">All categories</option>
+          {CATEGORY_LEGEND.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+        <select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="">All statuses</option>
+          <option value="open">open</option>
+          <option value="in_progress">in_progress</option>
+          <option value="resolved">resolved</option>
+          <option value="closed">closed</option>
+        </select>
+      </div>
+      {projectId && <ObservationResults key={`${projectId}/${category}/${status}`} {...{ projectId, category, status }} />}
+    </>
+  );
+}
+
+function ObservationResults({ projectId, category, status }: { projectId: string; category: string; status: string }) {
+  const router = useRouter();
+  const [points, setPoints] = useState<Point[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [request, setRequest] = useState<{ cursor: string | null }>({ cursor: null });
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({ project_id: projectId });
+    if (category) params.set('category', category);
+    if (status) params.set('status', status);
+    if (request.cursor) params.set('cursor', request.cursor);
+    async function loadPage() {
+      try {
+        const response = await fetch(`/bff/inspection-points?${params}`, { signal: controller.signal });
+        if (!response.ok) throw new Error('Observation request failed');
+        const page = await response.json();
+        if (controller.signal.aborted) return;
+        setPoints((previous) => [...previous, ...page.items]);
+        setCursor(page.next_cursor);
+      } catch {
+        if (!controller.signal.aborted) setFailed(true);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    }
+    void loadPage();
+    return () => controller.abort();
+  }, [projectId, category, status, request]);
+
+  return (
+    <>
+      <p role="status">
+        Showing {points.length} matching observations in the list and on the map.{' '}
+        {loading ? 'Loading observations…' : failed ? 'Could not load observations.' : cursor ? 'More available.' : 'All matches loaded.'}
+      </p>
       <div className="layout-split">
-        <DashboardMap points={mapPoints} />
+        <DashboardMap points={points} />
         <div>
-          <div className="filters">
-            <select value={category} onChange={(e) => setCategory(e.target.value)}>
-              <option value="">All categories</option>
-              {CATEGORY_LEGEND.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </select>
-            <select value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="">All statuses</option>
-              <option value="open">open</option>
-              <option value="in_progress">in_progress</option>
-              <option value="resolved">resolved</option>
-              <option value="closed">closed</option>
-            </select>
-          </div>
           <table>
             <thead>
               <tr>
@@ -132,7 +172,7 @@ export function DashboardClient({
             <tbody>
               {points.map((p) => (
                 <tr key={p.id} onClick={() => router.push(`/points/${p.id}`)} style={{ cursor: 'pointer' }}>
-                  <td>{formatCapturedAt(p.captured_at)}</td>
+                  <td><a href={`/points/${p.id}`} onClick={(e) => e.stopPropagation()}>{formatCapturedAt(p.captured_at)}</a></td>
                   <td>{p.category}</td>
                   <td>{p.status}</td>
                   <td>{p.inspector_id?.slice(0, 8) ?? '—'}</td>
@@ -140,6 +180,15 @@ export function DashboardClient({
               ))}
             </tbody>
           </table>
+          {(cursor || failed) && (
+            <button disabled={loading} onClick={() => {
+              setLoading(true);
+              setFailed(false);
+              setRequest({ cursor });
+            }}>
+              {failed ? 'Retry loading observations' : 'Load more observations'}
+            </button>
+          )}
         </div>
       </div>
     </>

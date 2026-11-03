@@ -46,11 +46,12 @@ export class InspectionPointsController {
     @Query('status') status?: string,
     @Query('bbox') bbox?: string,
     @Query('limit') limit?: string,
+    @Query('cursor') cursor?: string,
   ) {
     if (!project_id) {
       throw new ApiException(ErrorCode.VALIDATION_ERROR, undefined, 'project_id is required');
     }
-    return this.points.list(actor, { project_id, category, status, bbox, limit });
+    return this.points.list(actor, { project_id, category, status, bbox, limit, cursor });
   }
 
   @Get('by-client/:clientUuid')

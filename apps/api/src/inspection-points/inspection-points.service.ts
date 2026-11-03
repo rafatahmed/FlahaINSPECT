@@ -138,6 +138,7 @@ export class InspectionPointsService {
       status?: string;
       bbox?: string;
       limit?: string;
+      cursor?: string;
     },
   ) {
     await this.assertProjectAccess(actor, query.project_id);
@@ -146,6 +147,15 @@ export class InspectionPointsService {
       eq(inspectionPoints.projectId, query.project_id),
       isNull(inspectionPoints.deletedAt),
     ];
+    if (query.cursor !== undefined) {
+      if (typeof query.cursor !== 'string' || !/^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(query.cursor)) {
+        throw new ApiException(ErrorCode.VALIDATION_ERROR, undefined, 'Invalid observation cursor');
+      }
+      filters.push(sql`(${inspectionPoints.capturedAt}, ${inspectionPoints.id}) < (
+        SELECT captured_at, id FROM inspection_points
+        WHERE id = ${query.cursor}::uuid AND project_id = ${query.project_id}::uuid
+      )`);
+    }
     if (query.category) {
       filters.push(eq(inspectionPoints.category, query.category as never));
     }
@@ -166,13 +176,13 @@ export class InspectionPointsService {
       .select({ id: inspectionPoints.id })
       .from(inspectionPoints)
       .where(and(...filters))
-      .orderBy(desc(inspectionPoints.capturedAt))
-      .limit(limit);
+      .orderBy(desc(inspectionPoints.capturedAt), desc(inspectionPoints.id))
+      .limit(limit + 1);
     const items = [];
-    for (const row of rows) {
+    for (const row of rows.slice(0, limit)) {
       items.push(await this.loadPublic(row.id));
     }
-    return { items };
+    return { items, next_cursor: rows.length > limit ? rows[limit - 1].id : null };
   }
 
   async patch(
