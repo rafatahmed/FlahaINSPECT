@@ -1,5 +1,3 @@
-# PR-01 CI skeleton. Node workspaces via Turborepo.
-# Flutter is a sibling app — separate job, not a turbo pipeline.
 name: CI
 
 on:
@@ -17,25 +15,26 @@ env:
   PUPPETEER_SKIP_DOWNLOAD: '1'
 
 jobs:
-  field:
-    name: Expo field / iOS bundle
+  changes:
+    name: Identify affected checks
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: apps/field
+    outputs:
+      node: ${{ steps.paths.outputs.node }}
+      compose: ${{ steps.paths.outputs.compose }}
+      flutter: ${{ steps.paths.outputs.flutter }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: apps/field/package-lock.json
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm run export:ios
+          fetch-depth: 0
+      - id: paths
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash .github/ci/affected.sh >> "$GITHUB_OUTPUT"
 
   node:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.node == 'true') }}
     name: api / web / worker
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -70,6 +69,8 @@ jobs:
         run: pnpm build
 
   compose:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.compose == 'true') }}
     name: docker compose smoke
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -136,6 +137,8 @@ jobs:
         run: docker compose -f infra/docker-compose.yml --env-file .env down -v
 
   mobile:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.flutter == 'true') }}
     name: flutter sibling
     runs-on: ubuntu-latest
     timeout-minutes: 20
