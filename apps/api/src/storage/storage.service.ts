@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { GetObjectCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, HeadBucketCommand, HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { CopyObjectCommand } from '@aws-sdk/client-s3';
 
@@ -25,6 +25,18 @@ export class StorageService {
             forcePathStyle: process.env.S3_FORCE_PATH_STYLE !== 'false',
           })
         : null;
+  }
+
+  async bucketReady(): Promise<boolean> {
+    if (!this.client || !this.bucket) return false;
+    try {
+      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }), {
+        abortSignal: AbortSignal.timeout(1500),
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async signedGet(
