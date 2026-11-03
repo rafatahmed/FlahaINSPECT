@@ -5,8 +5,12 @@ import { staffApiDenial } from './upstream';
 
 export async function photoResponse(path: string) {
   const denied = await staffApiDenial('GET', path);
+  if (denied) return Response.json(denied.json, { status: denied.status, headers: { 'Cache-Control': 'private, no-store' } });
+  return streamApiImage(path);
+}
+
+export async function streamApiImage(path: string) {
   const headers = { 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' };
-  if (denied) return Response.json(denied.json, { status: denied.status, headers });
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   // Only the configured API receives the credential. Never follow a media redirect.
   const res = await fetch(API_BASE + API_PREFIX + path, {

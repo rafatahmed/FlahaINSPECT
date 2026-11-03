@@ -21,6 +21,7 @@ type Point = {
   status: string;
   version: number;
   photos?: Photo[];
+  release?: { summary: string } | null;
 };
 
 export function PointEditor({ point, canEdit }: { point: Point; canEdit: boolean }) {
@@ -33,6 +34,27 @@ export function PointEditor({ point, canEdit }: { point: Point; canEdit: boolean
   const [version, setVersion] = useState(point.version);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const [released, setReleased] = useState(!!point.release);
+  const [summary, setSummary] = useState(point.release?.summary ?? '');
+
+  async function release() {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await fetch(`/bff/inspection-points/${point.id}/release`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ version, summary: summary.trim() }),
+      });
+      if (response.ok) setReleased(true);
+      else setError(response.status === 409 ? 'Refresh the observation before releasing it.' : 'Could not release the finding.');
+    } catch {
+      setError('Could not confirm release. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function save() {
     setBusy(true);
@@ -116,6 +138,20 @@ export function PointEditor({ point, canEdit }: { point: Point; canEdit: boolean
           <button type="button" onClick={() => void remove()}>
             Soft-delete
           </button>
+          <section>
+            <h2>Client finding</h2>
+            {released ? <>
+              <p role="status">Finding released to project clients.</p>
+              <p>{summary}</p>
+            </> : <>
+              <label htmlFor="client-summary">Client summary</label>
+              <textarea id="client-summary" maxLength={4000} value={summary} onChange={e => setSummary(e.target.value)} />
+              <button type="button" disabled={busy || !ready || !summary.trim()} onClick={() => void release()}>
+                Release finding
+              </button>
+              {!ready && <p>A ready photo is required to release a finding.</p>}
+            </>}
+          </section>
           {error ? <p className="error">{error}</p> : null}
         </> : <dl>
           <dt>Remarks</dt><dd>{point.remarks || 'None'}</dd>

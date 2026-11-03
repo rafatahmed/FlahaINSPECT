@@ -4,7 +4,7 @@ import type { AuthUser } from '../auth/auth.types';
 import { ApiException } from '../common/api-exception';
 import { ErrorCode } from '../common/errors';
 import type { Db } from '../db/client';
-import { inspectionPoints, photos, projectMembers, projects } from '../db/schema';
+import { inspectionPoints, photos, projectMembers, projects, releasedFindings } from '../db/schema';
 import { projectAccess } from '../projects/project-access';
 import { StorageService } from '../storage/storage.service';
 import { recordSyncLag } from '../metrics/registry';
@@ -114,7 +114,11 @@ export class InspectionPointsService {
 
   async get(actor: AuthUser, id: string) {
     const row = await this.requirePoint(actor, id);
-    return { point: await this.loadPublic(row.id) };
+    const point = await this.loadPublic(row.id);
+    if (actor.role !== 'manager') return { point };
+    const [release] = await this.db.select({ summary: releasedFindings.summary })
+      .from(releasedFindings).where(eq(releasedFindings.pointId, row.id));
+    return { point: { ...point, release: release ?? null } };
   }
 
   async getByClient(actor: AuthUser, clientUuid: string) {

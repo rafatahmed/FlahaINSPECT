@@ -190,6 +190,23 @@ export const photos = pgTable(
   ],
 );
 
+export const releasedFindings = pgTable(
+  'released_findings',
+  {
+    pointId: uuid('point_id').primaryKey().references(() => inspectionPoints.id),
+    projectId: uuid('project_id').notNull().references(() => projects.id),
+    sourceVersion: integer('source_version').notNull(),
+    summary: text('summary').notNull(),
+    category: pointCategory('category').notNull(),
+    latitude: doublePrecision('latitude').notNull(),
+    longitude: doublePrecision('longitude').notNull(),
+    photoKey: text('photo_key').notNull(),
+    releasedBy: uuid('released_by').notNull().references(() => users.id),
+    releasedAt: timestamp('released_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  t => [index('released_findings_project_idx').on(t.projectId, t.releasedAt.desc())],
+);
+
 export const reports = pgTable(
   'reports',
   {

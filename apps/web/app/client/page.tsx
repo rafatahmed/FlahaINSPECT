@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Shell } from '@/components/shell';
 import { checkPageResponse, pageAccount } from '@/lib/page-account';
 import { pageUpstream } from '@/lib/upstream';
@@ -13,7 +14,7 @@ export default async function ClientPage() {
       <h2>Your projects</h2>
       {status === 404 || !projects ? <p>Client project information is unavailable.</p>
         : projects.length === 0 ? <p>No projects assigned.</p>
-        : <ul>{projects.map(project => <li key={project.id}>{project.name}</li>)}</ul>}
+        : <ul>{projects.map(project => <li key={project.id}><Link href={`/client/projects/${project.id}`}>{project.name}</Link></li>)}</ul>}
     </Shell>
   );
 }
