@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "FlahaINSPECT Dev",
+    "slug": "flahainspect",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "ios": {
+      "bundleIdentifier": "com.flaha.inspect.field",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.flaha.inspect.field",
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/logo-white.png",
+          "imageWidth": 140,
+          "backgroundColor": "#101418"
+        }
+      ],
+      "expo-sqlite",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Photograph the condition at this inspection point.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Record the location and GPS accuracy of each inspection."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5ca5b672-0614-4992-b486-590dc4cf5d67"
+      }
+    },
+    "owner": "rafatkhashan"
+  }
+}

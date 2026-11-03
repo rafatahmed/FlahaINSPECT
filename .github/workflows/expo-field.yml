@@ -1,0 +1,33 @@
+name: Expo field
+
+on:
+  pull_request:
+    paths: &field_paths
+      - 'apps/field/**'
+      - '.github/workflows/expo-field.yml'
+  push:
+    branches: [main]
+    paths: *field_paths
+
+concurrency:
+  group: expo-field-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  field:
+    name: Expo field / iOS bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/field
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/field/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run export:ios

@@ -1,0 +1,35 @@
+{
+  "name": "field",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@expo/ui": "~58.0.27",
+    "expo": "~58.0.22",
+    "expo-crypto": "~58.0.7",
+    "expo-dev-client": "~58.0.18",
+    "expo-file-system": "~58.0.13",
+    "expo-image-manipulator": "~58.0.16",
+    "expo-image-picker": "~58.0.10",
+    "expo-location": "~58.0.20",
+    "expo-secure-store": "~58.0.2",
+    "expo-splash-screen": "~58.0.12",
+    "expo-sqlite": "~58.0.15",
+    "expo-status-bar": "~58.0.4",
+    "react": "19.3.0",
+    "react-native": "0.88.1"
+  },
+  "devDependencies": {
+    "@types/react": "~19.3.0",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "export:ios": "expo export --platform ios --max-workers 2",
+    "start": "expo start",
+    "dev:iphone": "expo start --dev-client --tunnel --port 8083 --max-workers 2",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "private": true
+}

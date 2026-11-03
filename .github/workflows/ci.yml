@@ -1,5 +1,3 @@
-# PR-01 CI skeleton. Node workspaces via Turborepo.
-# Flutter is a sibling app — separate job, not a turbo pipeline.
 name: CI
 
 on:
@@ -17,7 +15,26 @@ env:
   PUPPETEER_SKIP_DOWNLOAD: '1'
 
 jobs:
+  changes:
+    name: Identify affected checks
+    runs-on: ubuntu-latest
+    outputs:
+      node: ${{ steps.paths.outputs.node }}
+      compose: ${{ steps.paths.outputs.compose }}
+      flutter: ${{ steps.paths.outputs.flutter }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: paths
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: bash .github/ci/affected.sh >> "$GITHUB_OUTPUT"
+
   node:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.node == 'true') }}
     name: api / web / worker
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -52,7 +69,11 @@ jobs:
         run: pnpm build
 
   compose:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.compose == 'true') }}
     name: docker compose smoke
+    env:
+      COMPOSE_FILE: infra/docker-compose.yml:infra/docker-compose.ci.yml
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -60,9 +81,9 @@ jobs:
       - name: Config
         run: |
           cp .env.example .env
-          docker compose -f infra/docker-compose.yml --env-file .env config >/dev/null
+          docker compose --env-file .env config >/dev/null
       - name: Up
-        run: docker compose -f infra/docker-compose.yml --env-file .env up -d --build
+        run: docker compose --env-file .env up -d --build
       - name: Wait for API health
         run: |
           for i in $(seq 1 40); do
@@ -72,7 +93,7 @@ jobs:
             fi
             sleep 3
           done
-          docker compose -f infra/docker-compose.yml --env-file .env logs
+          docker compose --env-file .env logs
           exit 1
       - name: Ready + tusd port
         run: |
@@ -110,14 +131,16 @@ jobs:
         run: node infra/e2e/pilot-smoke.mjs
       - name: Hooks are not a host port
         run: |
-          published="$(docker compose -f infra/docker-compose.yml --env-file .env ps --format json)"
+          published="$(docker compose --env-file .env ps --format json)"
           echo "$published"
           echo "$published" | grep -v '8081'
       - name: Down
         if: always()
-        run: docker compose -f infra/docker-compose.yml --env-file .env down -v
+        run: docker compose --env-file .env down -v
 
   mobile:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.flutter == 'true') }}
     name: flutter sibling
     runs-on: ubuntu-latest
     timeout-minutes: 20
