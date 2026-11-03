@@ -72,6 +72,8 @@ jobs:
     needs: changes
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.compose == 'true') }}
     name: docker compose smoke
+    env:
+      COMPOSE_FILE: infra/docker-compose.yml:infra/docker-compose.ci.yml
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
@@ -79,9 +81,9 @@ jobs:
       - name: Config
         run: |
           cp .env.example .env
-          docker compose -f infra/docker-compose.yml --env-file .env config >/dev/null
+          docker compose --env-file .env config >/dev/null
       - name: Up
-        run: docker compose -f infra/docker-compose.yml --env-file .env up -d --build
+        run: docker compose --env-file .env up -d --build
       - name: Wait for API health
         run: |
           for i in $(seq 1 40); do
@@ -91,7 +93,7 @@ jobs:
             fi
             sleep 3
           done
-          docker compose -f infra/docker-compose.yml --env-file .env logs
+          docker compose --env-file .env logs
           exit 1
       - name: Ready + tusd port
         run: |
@@ -129,12 +131,12 @@ jobs:
         run: node infra/e2e/pilot-smoke.mjs
       - name: Hooks are not a host port
         run: |
-          published="$(docker compose -f infra/docker-compose.yml --env-file .env ps --format json)"
+          published="$(docker compose --env-file .env ps --format json)"
           echo "$published"
           echo "$published" | grep -v '8081'
       - name: Down
         if: always()
-        run: docker compose -f infra/docker-compose.yml --env-file .env down -v
+        run: docker compose --env-file .env down -v
 
   mobile:
     needs: changes
