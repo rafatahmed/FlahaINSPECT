@@ -26,6 +26,8 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Fixed
 
+- Keep the Expo field lockfile in repository-root EAS archives; verify a locked install and iOS export from archived inputs, and trigger Expo CI for root ignore-rule changes (#41).
+
 - Report history, status and download authorization now fetch explicit metadata columns without loading frozen evidence snapshots (#71).
 
 - Client-report issuance now honors the PDF pause flag before evidence reads or queue writes, including retries while paused (#70).

@@ -4,6 +4,7 @@ on:
   pull_request:
     paths: &field_paths
       - 'apps/field/**'
+      - '.gitignore'
       - '.github/workflows/expo-field.yml'
   push:
     branches: [main]
