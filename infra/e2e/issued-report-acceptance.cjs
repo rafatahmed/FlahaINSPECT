@@ -161,19 +161,52 @@ async function run() {
       );
       await manager.getByRole('button', { name: 'Issue new revision' }).click();
       const got = await response;
-      assert.equal(got.status(),202);
+      assert.equal(got.status(), 202);
       const created = await got.json();
       const original = got.request().postDataJSON();
-      const retries = await Promise.all([call(m,'/projects/'+a.id+'/issued-reports',original),call(m,'/projects/'+a.id+'/issued-reports',original)]);
-      assert.ok(retries.every(r=>r.status===202 && r.data.report.id===created.report.id));
-      console.log('Revision',revision,'queued and retries kept the same ID');
+      const retries = await Promise.all([
+        call(m, '/projects/' + a.id + '/issued-reports', original),
+        call(m, '/projects/' + a.id + '/issued-reports', original),
+      ]);
+      assert.ok(
+        retries.every(
+          (r) => r.status === 202 && r.data.report.id === created.report.id,
+        ),
+      );
+      console.log('Revision', revision, 'queued and retries kept the same ID');
       await manager
         .getByRole('status')
         .filter({ hasText: 'Revision ' + revision + ' queued' })
         .waitFor();
     }
-    const deniedIssue = await call(clients[0].t, '/projects/' + a.id + '/issued-reports', {request_id:randomUUID(),summaries:[]});
-    assert.equal(deniedIssue.status,403);
+    const deniedIssue = await call(
+      clients[0].t,
+      '/projects/' + a.id + '/issued-reports',
+      { request_id: randomUUID(), summaries: [] },
+    );
+    assert.equal(deniedIssue.status, 403);
+    const verifyDb = new Client({ connectionString: process.env.DATABASE_URL });
+    await verifyDb.connect();
+    try {
+      await verifyDb.query(
+        "ALTER TABLE jobs ADD CONSTRAINT test_issue_enqueue CHECK (type <> 'generate_report')",
+      );
+      const failed = await call(m, '/projects/' + a.id + '/issued-reports', {
+        request_id: randomUUID(),
+        summaries: [],
+      });
+      assert.equal(failed.status, 500);
+      assert.equal(
+        (await verifyDb.query('SELECT count(*)::int AS n FROM reports')).rows[0]
+          .n,
+        0,
+      );
+    } finally {
+      await verifyDb.query(
+        'ALTER TABLE jobs DROP CONSTRAINT test_issue_enqueue',
+      );
+      await verifyDb.end();
+    }
     await issue('Approved revision one', 1);
     async function revision(n) {
       for (let k = 0; k < 80; k++) {
