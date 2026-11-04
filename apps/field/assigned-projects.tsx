@@ -19,13 +19,12 @@ type Props = {
 
 export function AssignedProjects({ role, profile, projects, pending, busy, message, cached, onSelect, onRefresh, onSignOut }: Props) {
   const trigger = useRef<React.ComponentRef<typeof View>>(null);
-  const heading = useRef<React.ComponentRef<typeof Text>>(null);
   const [showProfile, setShowProfile] = useState(false);
   const title = role === 'manager' ? 'All projects' : role === 'client' ? 'My projects' : 'Assigned projects';
   const client = role === 'client';
   return <View style={styles.screen}>
     <StatusBar barStyle="light-content" />
-    <FlatList data={projects} keyExtractor={p => p.id} contentContainerStyle={styles.page}
+    <FlatList accessibilityElementsHidden={showProfile} importantForAccessibility={showProfile ? "no-hide-descendants" : "auto"} data={projects} keyExtractor={p => p.id} contentContainerStyle={styles.page}
       contentInsetAdjustmentBehavior="automatic"
       ListHeaderComponent={<View style={styles.header}>
         <FieldBrand />
@@ -62,11 +61,10 @@ export function AssignedProjects({ role, profile, projects, pending, busy, messa
             style={({ pressed }) => [styles.link, pressed && styles.pressed]}><Text style={styles.body}>{onRefresh ? 'Sign out' : 'Exit preview'}</Text></Pressable>
         </View>
       </View>} />
-    {profile && <Modal visible={showProfile} presentationStyle="pageSheet" animationType="slide"
-      onShow={() => { if (heading.current) AccessibilityInfo.sendAccessibilityEvent(heading.current, 'focus'); }}
+    {profile && <Modal visible={showProfile} presentationStyle="fullScreen" animationType="slide"
       onDismiss={() => { if (trigger.current) AccessibilityInfo.sendAccessibilityEvent(trigger.current, 'focus'); }}
-      allowSwipeDismissal onRequestClose={() => setShowProfile(false)}>
-      <ProfileScreen headingRef={heading} user={profile} busy={busy} message={message} onBack={() => setShowProfile(false)} onSignOut={onSignOut}/>
+      onRequestClose={() => setShowProfile(false)}>
+      <ProfileScreen user={profile} busy={busy} message={message} onBack={() => setShowProfile(false)} onSignOut={onSignOut}/>
     </Modal>}
   </View>;
 }

@@ -26,6 +26,8 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Fixed
 
+- Keep My profile navigation reachable at maximum accessibility text with one full-screen native scrolling form; stabilize modal VoiceOver navigation and return focus (#46).
+
 - Keep the Expo field lockfile in repository-root EAS archives; verify a locked install and iOS export from archived inputs, and trigger Expo CI for root ignore-rule changes (#41).
 
 - Report history, status and download authorization now fetch explicit metadata columns without loading frozen evidence snapshots (#71).

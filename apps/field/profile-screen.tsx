@@ -10,27 +10,26 @@ const workspace = {
   client: 'View released findings and photos for your assigned projects.',
 };
 
-export function ProfileScreen({ user, busy, message, onBack, onSignOut, headingRef }: {
-  headingRef: React.RefObject<React.ComponentRef<typeof Text> | null>; user: Profile; busy: boolean; message: string; onBack: () => void; onSignOut: () => void;
+export function ProfileScreen({ user, busy, message, onBack, onSignOut }: {
+  user: Profile; busy: boolean; message: string; onBack: () => void; onSignOut: () => void;
 }) {
   const name = user.full_name?.trim();
   const initials = (name || user.email || '').split(/\s+/).filter(Boolean).slice(0, 2)
     .map(part => Array.from(part)[0]).join('').toUpperCase();
   const header = <>
     <Pressable accessibilityRole="button" accessibilityLabel="Back to projects" onPress={onBack} style={s.link}><Text style={s.action}>‹  Projects</Text></Pressable>
-    <Text ref={headingRef} accessible accessibilityRole="header" style={s.title}>My profile</Text>
+    <Text accessible accessibilityRole="header" style={s.title}>My profile</Text>
   </>;
   if (requireOptionalNativeModule('ExpoUI')) {
     // Older installed development clients can still open the account screen.
     const { NativeProfileRows } = require('./native-profile-rows') as typeof import('./native-profile-rows');
-    return <View style={s.screen}>
-      <View style={s.header}>{header}</View>
+    return <View style={s.screen} accessibilityViewIsModal onAccessibilityEscape={onBack}>
       <NativeProfileRows name={name || user.email || 'Signed-in account'} email={user.email}
-        role={user.role} description={user.role && workspace[user.role]} busy={busy} message={message} onSignOut={onSignOut}/>
+        role={user.role} description={user.role && workspace[user.role]} busy={busy} message={message} onBack={onBack} onSignOut={onSignOut}/>
     </View>;
   }
   return <ScrollView style={s.screen} contentContainerStyle={s.page}
-    contentInsetAdjustmentBehavior="automatic" alwaysBounceVertical={false}>
+    contentInsetAdjustmentBehavior="automatic" alwaysBounceVertical={false} accessibilityViewIsModal onAccessibilityEscape={onBack}>
     {header}
     <View style={s.card}>
       {!!initials && <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={s.avatar}>
@@ -53,7 +52,6 @@ export function ProfileScreen({ user, busy, message, onBack, onSignOut, headingR
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: color.canvas },
-  header: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 8 },
   page: { width: '100%', maxWidth: 488, alignSelf: 'center', paddingHorizontal: 24, paddingVertical: 36, gap: 16 },
   link: { alignSelf: 'flex-start', minHeight: 48, justifyContent: 'center', paddingHorizontal: 4 },
   action: { color: color.accent, fontSize: 17, fontWeight: '600' },
