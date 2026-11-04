@@ -7,7 +7,7 @@ import { Paths } from 'expo-file-system';
 import { randomUUID } from 'expo-crypto';
 import * as SplashScreen from 'expo-splash-screen';
 import { ApiError, api, login, logout, origin, restore, type Project, type Session } from './api';
-import { db, list, photoFile, save, sync, sessions, startInspectionSession, type Category } from './observations';
+import { db, list, photoFile, save, sync, sessions, startInspectionSession, localSessions, reconcileSession, type Category } from './observations';
 import { SessionStartScreen } from './session-start-screen';
 import { LoginScreen } from './login-screen';
 import { InspectionList } from './inspection-list';
@@ -202,6 +202,22 @@ export default function App() {
           setDraft(null); setNote(''); setCategory(null); setPage('work'); setMessage('Saved locally — pending sync.');
         })}/> :
       project && <InspectionList projectName={project.name} busy={busy} message={message}
+          activeSession={sessions.current(owner,project.id)?.id}
+          sessionSummary={localSessions(owner,project.id).map(visit=>'Session '+visit.id+' — '+(visit.ended_at?'Ended; check sync to confirm completion':'Active; sync completeness not confirmed')).join('\n')}
+          onEndSession={() => Alert.alert('End this inspection session?', 'Saved evidence can still sync. Further captures will start a new visit.',[
+            {text:'Cancel',style:'cancel'}, {text:'End session',onPress:()=>run(async()=>{
+              const visit=sessions.current(owner,project.id);
+              if(visit) sessions.end(owner,visit.id,new Date().toISOString());
+              setMessage('Session ended on this phone. Saved evidence is retained; check sync when connected.');
+            })}])}
+          onReconcile={captureOnlyPilot?undefined:()=>run(async()=>{
+            const messages=[];
+            for(const visit of localSessions(owner,project.id)) {
+              const state=await reconcileSession(owner,visit.id);
+              messages.push('Session '+visit.id+': '+state.sync_state+'; '+(state.known_pending??'unknown')+' pending, '+(state.known_failed??'unknown')+' failed.');
+            }
+            setMessage(messages.join('\n') || 'No inspection sessions on this phone.');
+          })}
         onBack={back} onSignOut={() => run(signOut)}
         items={projectRows.map(row => {
           const point = JSON.parse(row.point);

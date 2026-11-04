@@ -76,6 +76,23 @@ async function main() {
   await page.getByText('Session '+session+' / Observation 1',{exact:true}).waitFor();
   await page.reload();
   await page.getByText('Session '+session+' / Observation 1',{exact:true}).waitFor();
+  const ended=await request('/inspection-sessions/'+session+'/end',{
+   device_id:point.session_device_id,ended_at:new Date().toISOString(),allocated_count:2,
+   observations:[{client_uuid:point.client_uuid,observation_number:1,photo_client_uuid:randomUUID(),disposition:'saved'},
+    {client_uuid:second.json.point.client_uuid,observation_number:2,photo_client_uuid:randomUUID(),disposition:'saved'}]
+  },token);
+  assert.equal(ended.status,201);
+  const progress=await request('/inspection-sessions/'+session+'/sync-state',{device_id:point.session_device_id,sequence:1,pending:2,failed:1,complete:false},token);
+  assert.equal(progress.status,201);
+  const premature=await request('/inspection-sessions/'+session+'/sync-state',{device_id:point.session_device_id,sequence:2,pending:0,failed:0,complete:true},token);
+  assert.equal(premature.status,409);
+  await page.goto(web+'/dashboard?project='+project.id);
+  const sessionCard=page.getByRole('heading',{name:'Session '+session,exact:true}).locator('..');
+  await sessionCard.getByText('Ended — pending',{exact:true}).waitFor();
+  await sessionCard.getByText(/Pending: 2; failed: 1/).waitFor();
+  await page.reload();
+  await page.getByRole('heading',{name:'Session '+session,exact:true}).locator('..').getByText('Ended — pending',{exact:true}).waitFor();
+  console.log('PASS: manager browser shows ended visit with pending/failed evidence and rejects premature completion');
   console.log('PASS: real API retry and manager browser session/number display after reload');
  } finally { await browser.close(); }
 }

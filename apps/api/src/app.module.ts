@@ -1,3 +1,4 @@
+import { InspectionSessionsModule } from './inspection-sessions/inspection-sessions.module';
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { DbModule } from './db/db.module';
@@ -22,6 +23,7 @@ import { UsersModule } from './users/users.module';
     UsersModule,
     ProjectsModule,
     InspectionPointsModule,
+    InspectionSessionsModule,
     PhotosModule,
     ReportsModule,
     TusHooksModule,

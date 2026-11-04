@@ -35,7 +35,7 @@ export async function save(owner: string, point: Point, uri: string) {
   }
 }
 
-export async function sync(row: Row, onProgress?: (status: string) => void) {
+async function syncEvidence(row: Row, onProgress?: (status: string) => void) {
   const point: Point = JSON.parse(row.point);
   onProgress?.('Sending observation...');
   const accepted = await api('/inspection-points', point);
@@ -93,4 +93,38 @@ export async function sync(row: Row, onProgress?: (status: string) => void) {
   const status = (await api('/photos/' + photo.id)).photo.status;
   if (status === 'ready') db.runSync('UPDATE observation SET ready=1 WHERE id=?', row.id);
   return status as string;
+}
+
+// Preserve local failure information across relaunch; server reports it as last known state.
+db.execSync('CREATE TABLE IF NOT EXISTS observation_failure(id TEXT PRIMARY KEY,message TEXT NOT NULL);');
+export const localSessions = (owner: string, projectId: string) => db.getAllSync<import('./session-store').InspectionSession>(
+  'SELECT s.*,l.ended_at,l.manifest,l.sequence FROM inspection_session s LEFT JOIN session_lifecycle l ON l.id=s.id WHERE s.owner=? AND s.project_id=? ORDER BY s.rowid DESC',owner,projectId);
+export async function reconcileSession(owner: string, id: string) {
+ const visit=db.getFirstSync<import('./session-store').InspectionSession>('SELECT s.*,l.ended_at,l.manifest,l.sequence FROM inspection_session s LEFT JOIN session_lifecycle l ON l.id=s.id WHERE s.owner=? AND s.id=?',owner,id);
+ if(!visit) throw new Error('Inspection session not found on this phone.');
+ await api('/inspection-sessions',{client_uuid:id,project_id:visit.project_id,device_id:visit.device_id,started_at:visit.started_at});
+ if(visit.ended_at) await api('/inspection-sessions/'+id+'/end',{device_id:visit.device_id,ended_at:visit.ended_at,allocated_count:visit.next_number-1,observations:JSON.parse(visit.manifest!)});
+ const rows=list(owner).filter(row=>JSON.parse(row.point).session_client_uuid===id);
+ const pending=rows.filter(row=>!row.ready).length;
+ const failed=rows.filter(row=>!row.ready && db.getFirstSync('SELECT 1 FROM observation_failure WHERE id=?',row.id)).length;
+ db.runSync('INSERT INTO session_lifecycle(id,sequence) VALUES(?,1) ON CONFLICT(id) DO UPDATE SET sequence=sequence+1',id);
+ const sequence=db.getFirstSync<{sequence:number}>('SELECT sequence FROM session_lifecycle WHERE id=?',id)!.sequence;
+ const complete=!!visit.ended_at && pending===0 && JSON.parse(visit.manifest!).length===visit.next_number-1;
+ return (await api('/inspection-sessions/'+id+'/sync-state',{device_id:visit.device_id,sequence,pending,failed,complete})).session;
+}
+export async function sync(row: Row,onProgress?: (status:string)=>void) {
+ const owner=db.getFirstSync<{owner:string}>('SELECT owner FROM observation WHERE id=?',row.id)?.owner;
+ const sessionId=JSON.parse(row.point).session_client_uuid as string|undefined;
+ if(!owner) throw new Error('Observation not found on this phone.');
+ try {
+  if(sessionId) await reconcileSession(owner,sessionId);
+  const result=await syncEvidence(row,onProgress);
+  db.runSync('DELETE FROM observation_failure WHERE id=?',row.id);
+  if(sessionId) await reconcileSession(owner,sessionId);
+  return result;
+ } catch(error) {
+  db.runSync('INSERT OR REPLACE INTO observation_failure(id,message) VALUES(?,?)',row.id,String(error));
+  if(sessionId) await reconcileSession(owner,sessionId).catch(()=>{});
+  throw error;
+ }
 }

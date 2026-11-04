@@ -64,3 +64,70 @@ test('legacy captures still sync, partial session payloads fail, revoked access 
  await assert.rejects(service.create(inspector,capture(visit)));
  await pool.query('UPDATE projects SET is_archived=false WHERE id=$1',[project]);
 });
+test('end before upload accepts only inventoried evidence and completes after server readiness',async()=>{
+ const {InspectionSessionsService}=require('../../apps/api/dist/inspection-sessions/inspection-sessions.service');
+ const sessions=new InspectionSessionsService(createDb(pool));
+ const id=randomUUID(),device=randomUUID(),photo=randomUUID();
+ const input=capture({session_client_uuid:id,session_device_id:device,session_started_at:'2026-11-04T08:00:00.000Z',observation_number:1});
+ await sessions.register(inspector,{client_uuid:id,project_id:project,device_id:device,started_at:input.session_started_at});
+ const end={device_id:device,ended_at:'2026-11-04T10:00:00.000Z',allocated_count:1,observations:[{client_uuid:input.client_uuid,observation_number:1,photo_client_uuid:photo,disposition:'saved'}]};
+ await sessions.end(inspector,id,end); await sessions.end(inspector,id,end);
+ await assert.rejects(sessions.end(inspector,id,{...end,observations:[]}),e=>e.getStatus()===409);
+ await assert.rejects(service.create(inspector,{...input,client_uuid:randomUUID()}),e=>e.getStatus()===409);
+ const point=(await service.create(inspector,input)).point;
+ await sessions.syncState(inspector,id,{device_id:device,sequence:1,pending:1,failed:0,complete:false});
+ assert.equal((await sessions.list(manager,project)).items.find(s=>s.id===id).sync_state,'pending');
+ await assert.rejects(sessions.syncState(inspector,id,{device_id:device,sequence:2,pending:0,failed:0,complete:true}),e=>e.getStatus()===409);
+ await pool.query("INSERT INTO photos(client_uuid,inspection_point_id,project_id,sha256,byte_size,content_type,status) VALUES($1,$2,$3,$4,1,'image/jpeg','ready')",[photo,point.id,project,'a'.repeat(64)]);
+ await sessions.syncState(inspector,id,{device_id:device,sequence:3,pending:0,failed:0,complete:true});
+ assert.equal((await sessions.list(manager,project)).items.find(s=>s.id===id).sync_state,'complete');
+ await assert.rejects(sessions.syncState(inspector,id,{device_id:device,sequence:1,pending:1,failed:0,complete:false}),e=>e.getStatus()===409);
+});
+test('active and empty sessions cannot appear complete without an ended inventory',async()=>{
+ const {InspectionSessionsService}=require('../../apps/api/dist/inspection-sessions/inspection-sessions.service');const sessions=new InspectionSessionsService(createDb(pool));
+ const id=randomUUID(),device=randomUUID();await sessions.register(inspector,{client_uuid:id,project_id:project,device_id:device,started_at:'2026-11-04T08:00:00.000Z'});
+ assert.equal((await sessions.list(manager,project)).items.find(s=>s.id===id).sync_state,'unknown');
+ await assert.rejects(sessions.syncState(inspector,id,{device_id:device,sequence:1,pending:0,failed:0,complete:true}),e=>e.getStatus()===409);
+ await assert.rejects(sessions.end(manager,id,{device_id:device,ended_at:'2026-11-04T10:00:00.000Z',allocated_count:0,observations:[]}),e=>e.getStatus()===404);
+ await assert.rejects(sessions.syncState(inspector,id,{device_id:randomUUID(),sequence:1,pending:0,failed:0,complete:false}),e=>e.getStatus()===409);
+ await sessions.end(inspector,id,{device_id:device,ended_at:'2026-11-04T10:00:00.000Z',allocated_count:0,observations:[]});
+ await sessions.syncState(inspector,id,{device_id:device,sequence:1,pending:0,failed:0,complete:true});
+ assert.equal((await sessions.list(manager,project)).items.find(s=>s.id===id).sync_state,'complete');
+ await assert.rejects(sessions.list({id:randomUUID(),role:'client'},project),e=>e.getStatus()===404);
+});
+test('final inventory cannot omit accepted captures or substitute photo identity',async()=>{
+ const {InspectionSessionsService}=require('../../apps/api/dist/inspection-sessions/inspection-sessions.service');const sessions=new InspectionSessionsService(createDb(pool));
+ const id=randomUUID(),device=randomUUID();const input=capture({session_client_uuid:id,session_device_id:device,session_started_at:'2026-11-04T08:00:00.000Z',observation_number:1});
+ const point=(await service.create(inspector,input)).point;const photo=randomUUID();
+ await pool.query("INSERT INTO photos(client_uuid,inspection_point_id,project_id,sha256,byte_size,content_type,status) VALUES($1,$2,$3,$4,1,'image/jpeg','ready')",[photo,point.id,project,'b'.repeat(64)]);
+ const end={device_id:device,ended_at:'2026-11-04T10:00:00.000Z',allocated_count:1,observations:[]};
+ await assert.rejects(sessions.end(inspector,id,end),e=>e.getStatus()===409);
+ await assert.rejects(sessions.end(inspector,id,{...end,observations:[{client_uuid:input.client_uuid,observation_number:1,photo_client_uuid:randomUUID(),disposition:'saved'}]}),e=>e.getStatus()===409);
+ await sessions.end(inspector,id,{...end,observations:[{client_uuid:input.client_uuid,observation_number:1,photo_client_uuid:photo,disposition:'saved'}]});
+});
+test('end racing capture never accepts evidence outside the frozen inventory',async()=>{
+ const {InspectionSessionsService}=require('../../apps/api/dist/inspection-sessions/inspection-sessions.service');const sessions=new InspectionSessionsService(createDb(pool));
+ const id=randomUUID(),device=randomUUID(),started='2026-11-04T08:00:00.000Z';
+ await sessions.register(inspector,{client_uuid:id,project_id:project,device_id:device,started_at:started});
+ const results=await Promise.allSettled([
+  sessions.end(inspector,id,{device_id:device,ended_at:'2026-11-04T10:00:00.000Z',allocated_count:0,observations:[]}),
+  service.create(inspector,capture({session_client_uuid:id,session_device_id:device,session_started_at:started,observation_number:1}))
+ ]);
+ assert.equal(results.filter(result=>result.status==='fulfilled').length,1);
+ assert.equal(results.find(result=>result.status==='rejected').reason.getStatus(),409);
+});
+test('late photo identity and current project access are enforced for ended sessions',async()=>{
+ const {InspectionSessionsService}=require('../../apps/api/dist/inspection-sessions/inspection-sessions.service');const sessions=new InspectionSessionsService(createDb(pool));
+ const id=randomUUID(),device=randomUUID(),photo=randomUUID(),started='2026-11-04T08:00:00.000Z';
+ const input=capture({session_client_uuid:id,session_device_id:device,session_started_at:started,observation_number:1});
+ await sessions.register(inspector,{client_uuid:id,project_id:project,device_id:device,started_at:started});
+ await sessions.end(inspector,id,{device_id:device,ended_at:'2026-11-04T10:00:00.000Z',allocated_count:1,observations:[{client_uuid:input.client_uuid,observation_number:1,photo_client_uuid:photo,disposition:'saved'}]});
+ const point=(await service.create(inspector,input)).point;
+ await assert.rejects(pool.query("INSERT INTO photos(client_uuid,inspection_point_id,project_id,sha256,byte_size,content_type,status) VALUES($1,$2,$3,$4,1,'image/jpeg','ready')",[randomUUID(),point.id,project,'c'.repeat(64)]),e=>e.code==='23514');
+ await pool.query('UPDATE projects SET is_archived=true WHERE id=$1',[project]);
+ await assert.rejects(sessions.syncState(inspector,id,{device_id:device,sequence:1,pending:1,failed:0,complete:false}),e=>e.code==='PROJECT_ARCHIVED');
+ await pool.query('UPDATE projects SET is_archived=false WHERE id=$1',[project]);
+ await pool.query('DELETE FROM project_members WHERE project_id=$1 AND user_id=$2',[project,inspector.id]);
+ await assert.rejects(sessions.list(inspector,project),e=>e.getStatus()===404);
+ await pool.query('INSERT INTO project_members(project_id,user_id) VALUES($1,$2)',[project,inspector.id]);
+});

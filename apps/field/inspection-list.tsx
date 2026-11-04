@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button, Host } from '@expo/ui';
 import { FlatList, Image, Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { color } from './field-brand';
 
@@ -11,11 +12,12 @@ export type InspectionItem = {
 
 type Props = {
   projectName: string; items: InspectionItem[]; sample?: boolean; busy?: boolean; message?: string;
+  activeSession?: string; sessionSummary?: string; onEndSession?: () => void; onReconcile?: () => void;
   onReview?: (id: string) => void;
   onBack: () => void; onSync?: (id: string) => void; onSignOut?: () => void;
 };
 
-export function InspectionList({ projectName, items, sample, busy, message, onBack, onSync, onSignOut, onReview }: Props) {
+export function InspectionList({ projectName, items, sample, busy, message, onBack, onSync, onSignOut, onReview, activeSession, sessionSummary, onEndSession, onReconcile }: Props) {
   return <FlatList style={s.screen} contentContainerStyle={s.page} data={items} keyExtractor={item => item.id}
     alwaysBounceVertical={false} contentInsetAdjustmentBehavior="automatic"
     ListHeaderComponent={<View style={s.header}>
@@ -23,6 +25,11 @@ export function InspectionList({ projectName, items, sample, busy, message, onBa
       <Text style={s.action}>{sample ? 'SAMPLE DATA  /  ' : ''}{projectName}</Text>
       <Text accessibilityRole="header" style={s.title}>Inspection list &amp; sync</Text>
       <Text style={s.text}>{items.filter(i => !i.ready).length} pending {sample ? 'in preview' : 'on this device'}</Text>
+      {!!sessionSummary && <Text selectable style={s.text}>{sessionSummary}</Text>}
+      {(onEndSession || onReconcile) && <Host matchContents colorScheme="dark" seedColor={color.accent}>
+        {!!activeSession && onEndSession && <Button label="End inspection session" disabled={busy} onPress={onEndSession}/>}
+        {onReconcile && <Button label="Check session sync" disabled={busy} onPress={onReconcile}/>}
+      </Host>}
       {!!message && <Text accessibilityLiveRegion="polite" style={s.text}>{message}</Text>}
       {!onSync && <Text style={s.text}>Sync is unavailable in this offline capture pilot.</Text>}
     </View>}

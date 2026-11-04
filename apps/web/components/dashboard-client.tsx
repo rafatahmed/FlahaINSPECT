@@ -1,5 +1,6 @@
 'use client';
 
+import { SessionStatus } from './session-status';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -75,6 +76,7 @@ export function DashboardClient({
           </select>
         </label>
       </div>
+      {projectId && <SessionStatus projectId={projectId}/>}
       <h2>Project totals</h2>
       <div className="cards">
         <div className="card">
