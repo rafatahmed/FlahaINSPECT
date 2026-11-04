@@ -12,6 +12,14 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ## [Unreleased]
 
+### Acceptance work
+
+- Add isolated hosted queue, metadata and issued-revision regression coverage, preserving Expo-only job isolation (#72).
+- Reject concurrent stale manager edits atomically (#79); associate editor labels with controls (#78).
+- Return authoritative manager release metadata after collection refresh for Expo (#63).
+- Record real-browser web acceptance, resumed iPhone verification and explicit pending legacy product decisions in the roadmap.
+
+
 ### Documentation
 
 - Reconciled the current delivery roadmap with merged web/report work, remaining acceptance gates and all 22 open issue dispositions (#73).

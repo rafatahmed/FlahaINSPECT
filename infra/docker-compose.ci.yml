@@ -9,7 +9,7 @@ services:
         target: /etc/ci-s3.json
     volumes: !override
       - ci_objects:/data
-    ports: !reset []
+    ports: !override ["127.0.0.1:9000:9000"]
     healthcheck:
       test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:9333/cluster/status"]
 

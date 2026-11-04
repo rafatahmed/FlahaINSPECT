@@ -52,7 +52,7 @@ The original TDD non-goals remain historical context. Client access and issued r
 
 ## Current delivery plan (4 November 2026)
 
-**Baseline:** main `276479a`, including merged PR #76. The R0/R1/R2 sections below are historical delivery records, not the current execution queue. A historical `done` status does not certify current Expo device or deployment acceptance.
+**Baseline:** main `313b16e`, including merged PR #77. The R0/R1/R2 sections below are historical delivery records, not the current execution queue. A historical `done` status does not certify current Expo device or deployment acceptance.
 
 **Current objective:** finish and verify the inspector-to-manager-to-client web workflow, then resume Expo device acceptance. Do not resume iPhone testing until the web acceptance below is recorded.
 
@@ -60,11 +60,30 @@ The original TDD non-goals remain historical context. Client access and issued r
 
 | Order | Work | Status / tracking | Exit evidence |
 |---|---|---|---|
-| 1 | Reconcile this roadmap and triage accumulated issues | In progress: [#73](https://github.com/rafatahmed/FlahaINSPECT/issues/73) | Each open issue has a disposition below; candidate closures are checked against original acceptance and approved before external updates. |
-| 2 | Automate report acceptance in CI | Next: [#72](https://github.com/rafatahmed/FlahaINSPECT/issues/72) | Hosted runs execute queue/lease recovery, metadata projections and issued-revision acceptance against disposable services. Verify unchanged original PDF bytes, retries, rollback, downloads, cross-project denial and revocation. Expo-only changes still schedule no Docker/Flutter jobs. |
-| 3 | Complete web release acceptance | Pending verification; owned by this roadmap | Record concurrent-edit conflicts, archive behavior, keyboard/narrow layouts, and inspector/manager/client workflow against the approved test environment. Record the deployed revision and migration state; repository merges alone do not establish deployment. Obtain approval before deployment/database changes. |
-| 4 | Resume Expo implementation and device acceptance | Deferred until web acceptance: #63 and mobile triage below | Release state survives reopen/refresh; verify sync interruption/resume, offline recovery and actual issued PDF bytes. Record phone build and tested API revision. |
-| 5 | Resolve legacy product scope | Backlog; not an implicit release blocker | Decide whether sessions, photo numbering, hierarchical classification and linked map/thumbnail triage belong in the next release before implementing their old issues. |
+| 1 | Reconcile this roadmap and triage accumulated issues | Done: [#73](https://github.com/rafatahmed/FlahaINSPECT/issues/73) | Each open issue has a disposition below; candidate closures are checked against original acceptance and approved before external updates. |
+| 2 | Automate report acceptance in CI | In progress: [#72](https://github.com/rafatahmed/FlahaINSPECT/issues/72) | Hosted runs execute queue/lease recovery, metadata projections and issued-revision acceptance against disposable services. Verify unchanged original PDF bytes, retries, rollback, downloads, cross-project denial and revocation. Expo-only changes still schedule no Docker/Flutter jobs. |
+| 3 | Complete web release acceptance | Local acceptance passed; hosted confirmation pending in the #72 PR | Record concurrent-edit conflicts, archive behavior, keyboard/narrow layouts, and inspector/manager/client workflow against the approved test environment. Record the deployed revision and migration state; repository merges alone do not establish deployment. Obtain approval before deployment/database changes. |
+| 4 | Resume Expo implementation and device acceptance | Resumed in the same PR: #63; device evidence pending | Release state survives reopen/refresh; verify sync interruption/resume, offline recovery and actual issued PDF bytes. Record phone build and tested API revision. |
+| 5 | Resolve legacy product scope | Decision review included in the same PR; choices pending | Decide whether sessions, photo numbering, hierarchical classification and linked map/thumbnail triage belong in the next release before implementing their old issues. |
+
+### Current combined PR acceptance and decisions
+
+The user explicitly included web release acceptance, Expo #63/iPhone resumption and legacy product decision review in the same #72 PR. These are separate evidence gates within one delivery; no legacy feature has been approved for implementation or deferral by that scope instruction.
+
+**Local evidence, 4 November 2026:** isolated worktree based on `313b16e`; PostgreSQL 17 disposable databases migrated twice; SeaweedFS 4.52 private synthetic evidence; production Next.js and real Chrome browser sessions. All nine queue/metadata database regressions and the expanded issued-report browser suite pass. The suite covers rollback, retry IDs, immutable first-revision bytes, actual downloads, unrelated-client denial, same-session revocation, archive capture denial and continued authorized PDF access. Concurrent manager saves produce one success and one conflict with one version increment. Keyboard Enter submits login and Save; associated editor labels are verified. At 375 px, login, manager/inspector/client landing pages, editor, issuance and client report page have no horizontal page overflow. This does not certify every keyboard interaction or every device size.
+
+API/worker/web unit suites: **105 passing tests**. API and web builds passed; lint passed with two existing web warnings. Expo TypeScript and iOS export passed (873 modules). The manager release metadata fix passed repeated real-API collection requests and does not disclose release metadata to inspectors.
+
+**Still required:** hosted results on the published PR head; physical iPhone reopen/refresh and offline/interrupted-sync evidence; an explicit product decision for each legacy group below. No production deployment, production migration or production data repair was performed. Do not mark release/device acceptance complete from local build results.
+
+| Legacy group / issues | Explicit choice to review | Consequence / acceptance if selected | Decision |
+|---|---|---|---|
+| Sessions and photo numbering (#2, #4, #5) | Add inspection sessions with immutable per-session photo numbers, or retain project-based capture without sessions | Adding requires schema/API/Expo changes, offline allocation and duplicate/retry tests; define numbering across multiple inspectors before implementation. | Pending user decision |
+| Classification (#2, #4, #5, #6, #11, #12) | Require initial unclassified capture plus manager type1/type2/type3 classification, or retain Defect/Normal/Note | Define the type vocabulary, conditional rules, migration and report/filter mapping; existing categories do not satisfy the legacy hierarchy. | Pending user decision |
+| Field/zone hierarchy (#2, #5, #6, #12) | Introduce managed fields/zones, or retain project plus coordinates | Define ownership, required/optional location and historical reassignment before schema, filter and report changes. | Pending user decision |
+| Numbered map and synchronized thumbnails (#9, #10, #12) | Add bearing arrows, numbered board/strip and two-way selection, or keep current map/results navigation | Requires a selected numbering policy, shared selection state, keyboard behavior and large-project acceptance. | Pending user decision |
+
+These decisions are included for review in this PR, not silently answered by it. Keep legacy issues open until their remaining acceptance is implemented or explicitly superseded with a recorded product decision. #7/#8 closure recommendations still require the separate requested approval.
 
 ### What is already implemented
 
@@ -82,13 +101,14 @@ The original TDD non-goals remain historical context. Client access and issued r
 
 ### Open issue triage
 
-Snapshot: **22 open issues**. This is a triage snapshot, not 22 confirmed unfinished implementations. Keep the current queue above as the source of priority.
+Historical #73 reconciliation snapshot: **22 open issues** (before its merge and subsequent findings #78/#79). This is a triage snapshot, not 22 confirmed unfinished implementations. Keep the current queue above as the source of priority.
 
 | Issues | Disposition | Required next action |
 |---|---|---|
-| #73 | Current documentation task | Reconcile merged evidence, queue and issue dispositions. |
-| #72 | Next engineering task | Host report queue, metadata and issued-revision suites. |
-| #63 | Confirmed Expo defect; deferred | Fix authoritative manager release state after web acceptance. |
+| #73 | Done in merged PR #77 | Retain evidence-based dispositions; do not reopen reconciliation as an execution task. |
+| #72 | Current combined PR | Host report suites, finish web acceptance, resume Expo #63 and review legacy product decisions. |
+| #63 | Fix prepared in current PR; phone verification pending | Manager collection now returns authoritative release summaries. Repeated manager refresh and inspector non-disclosure pass against the real API; verify reopen/refresh on iPhone. |
+| #78 / #79 | Web acceptance defects fixed locally in current PR | Editor labels associate with controls; concurrent same-version saves yield one 200 and one 409. Retained browser regression passes. |
 | #41 | Keep open: archive acceptance outstanding | [.easignore](../apps/field/.easignore) includes all four originally missing inputs. PR #48 proves clean-checkout iOS export, not export from an inspected EAS archive. Inspect the archive and export from its contents before closure. |
 | #46 | Keep open: implemented, partial device evidence | [Profile](../apps/field/profile-screen.tsx) selects [native rows](../apps/field/native-profile-rows.tsx); dependency is tracked. User reported full name/email/role read correctly at largest text size after installing build `9449d5f2-8190-419a-ade6-67bf3aba5892`. Small-device layout and all role/offline cases were not established by that report. |
 | #37 | Keep open: source fix present, pilot acceptance outstanding | [App](../apps/field/App.tsx) omits onSync in capture-only mode; [list](../apps/field/inspection-list.tsx) hides the action and explains unavailability. Verify saved record/photo retention and sync-capable mode against the current pilot. |

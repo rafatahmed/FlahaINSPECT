@@ -26,10 +26,25 @@ async function ok(t, p, b) {
   assert.ok(r.status < 300, p + ' ' + r.status);
   return r.data;
 }
+
+// Fetch protected bytes inside the signed-in browser, including Secure localhost cookies.
+async function browserGet(page, url) {
+  const result = await page.evaluate(async target => {
+    const response = await fetch(target, { cache: 'no-store' });
+    return { status: response.status, bytes: Array.from(new Uint8Array(await response.arrayBuffer())) };
+  }, url);
+  return { status: () => result.status, body: async () => Buffer.from(result.bytes) };
+}
+async function assertNarrow(page, label) {
+  await page.setViewportSize({ width: 375, height: 812 });
+  const sizes = await page.evaluate(() => ({ viewport: innerWidth, content: document.documentElement.scrollWidth }));
+  assert.ok(sizes.content <= sizes.viewport + 1, `${label} overflows: ${JSON.stringify(sizes)}`);
+  await page.setViewportSize({ width: 1280, height: 900 });
+}
 async function run() {
   assert.equal(process.env.DISPOSABLE_FINDINGS_TEST, '1');
   assert.ok(new URL(process.env.DATABASE_URL).pathname.endsWith('_disposable'));
-  for (const url of [web, api, process.env.S3_ENDPOINT])
+  for (const url of [web, api, process.env.S3_ENDPOINT, process.env.DATABASE_URL])
     assert.ok(['localhost', '127.0.0.1'].includes(new URL(url).hostname));
   for (const url of [api + '/health', web + '/login']) {
     let ready = false;
@@ -133,6 +148,14 @@ async function run() {
     version: point.version,
     summary: 'Approved snapshot',
   });
+
+  // Expo's manager list must retain publication state after reopening or refreshing.
+  for (let refresh = 0; refresh < 2; refresh++) {
+    const managerItems = (await ok(m, '/inspection-points?project_id=' + a.id)).items;
+    assert.equal(managerItems.find(item => item.id === point.id).release?.summary, 'Approved snapshot');
+    const inspectorItems = (await ok(i, '/inspection-points?project_id=' + a.id)).items;
+    assert.equal(Object.hasOwn(inspectorItems.find(item => item.id === point.id), 'release'), false);
+  }
   const browser = await chromium.launch({
     executablePath: process.env.CHROME_PATH,
     headless: true,
@@ -142,18 +165,55 @@ async function run() {
       const context = await browser.newContext();
       const p = await context.newPage();
       await p.goto(web + '/login');
+      await assertNarrow(p, 'Login');
       await p.getByLabel('Email').fill(email);
       await p.getByLabel('Password').fill(password);
-      await p.getByRole('button', { name: 'Log in' }).click();
+      await p.getByLabel('Password').press('Enter');
       await p.waitForURL(web + landing);
+      await assertNarrow(p, landing);
       return p;
     }
     const manager = await login('manager@local.flaha', '/dashboard');
     const assigned = await login(clients[0].email, '/client');
     const other = await login(clients[1].email, '/client');
+
+    await login('inspector@local.flaha', '/projects');
+    const peer = await login('manager@local.flaha', '/dashboard');
+    await manager.goto(web + '/points/' + point.id);
+    await peer.goto(web + '/points/' + point.id);
+    for (const page of [manager, peer]) {
+      await page.getByLabel('Field note', { exact: true }).waitFor();
+      await page.getByLabel('Recommended procedure', { exact: true }).waitFor();
+      await page.getByLabel('Status', { exact: true }).waitFor();
+      await assertNarrow(page, 'Observation editor');
+    }
+    await manager.getByLabel('Remarks', { exact: true }).fill('Manager A edit');
+    await peer.getByLabel('Remarks', { exact: true }).fill('Manager B edit');
+    const beforeEdit = (await ok(m, '/inspection-points/' + point.id)).point;
+    const raceDb = new Client({ connectionString: process.env.DATABASE_URL });
+    await raceDb.connect();
+    try {
+      await raceDb.query("CREATE FUNCTION test_slow_edit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN PERFORM pg_sleep(0.3); RETURN NEW; END $$");
+      await raceDb.query("CREATE TRIGGER test_slow_edit BEFORE UPDATE ON inspection_points FOR EACH ROW EXECUTE FUNCTION test_slow_edit()");
+      const edits = await Promise.all([manager, peer].map(async page => {
+        const response = page.waitForResponse(r => r.url().includes('/bff/inspection-points/' + point.id) && r.request().method() === 'PATCH');
+        await page.getByRole('button', { name: 'Save', exact: true }).focus();
+        await page.keyboard.press('Enter');
+        return (await response).status();
+      }));
+      assert.deepEqual(edits.sort(), [200, 409], 'concurrent edits must reject the stale writer');
+      const latest = (await ok(m, '/inspection-points/' + point.id)).point;
+      assert.equal(latest.version, beforeEdit.version + 1);
+      assert.ok(['Manager A edit', 'Manager B edit'].includes(latest.remarks));
+    } finally {
+      await raceDb.query('DROP TRIGGER IF EXISTS test_slow_edit ON inspection_points');
+      await raceDb.query('DROP FUNCTION IF EXISTS test_slow_edit()');
+      await raceDb.end();
+    }
     async function issue(summary, revision) {
       await manager.goto(web + '/reports/issue/' + a.id);
       await manager.getByLabel('Approved summary 1').fill(summary);
+      await assertNarrow(manager, 'Report issuance');
       const response = manager.waitForResponse(
         (r) =>
           r.url().endsWith('/issued-reports') &&
@@ -229,6 +289,7 @@ async function run() {
     await assigned
       .getByRole('link', { name: 'Revision 1', exact: true })
       .click();
+    await assertNarrow(assigned, 'Issued report');
     const exact = assigned.url();
     assert.equal((await assigned.reload()).status(), 200);
     const photoUrl = new URL(
@@ -237,7 +298,7 @@ async function run() {
         .getAttribute('href'),
       web,
     ).href;
-    const pdf = await assigned.request.get(photoUrl);
+    const pdf = await browserGet(assigned, photoUrl);
     assert.equal(pdf.status(), 200);
     const firstBytes = await pdf.body();
     await require('node:fs/promises').writeFile(
@@ -255,16 +316,16 @@ async function run() {
       firstBytes,
     );
     assert.equal((await other.goto(exact)).status(), 404);
-    assert.equal((await other.request.get(photoUrl)).status(), 404);
+    assert.equal((await browserGet(other, photoUrl)).status(), 404);
     await issue('Corrected revision two', 2);
     const second = await revision(2);
     assert.notEqual(first.id, second.id);
     assert.deepEqual(
-      await (await assigned.request.get(photoUrl)).body(),
+      await (await browserGet(assigned, photoUrl)).body(),
       firstBytes,
     );
     const secondBytes = await (
-      await assigned.request.get(
+      await browserGet(assigned,
         web + '/bff/client/reports/' + second.id + '/file',
       )
     ).body();
@@ -273,13 +334,23 @@ async function run() {
       secondBytes,
     );
     assert.notDeepEqual(firstBytes, secondBytes);
+
+    await ok(m, '/projects/' + a.id + '/archive', {});
+    assert.ok(!(await ok(i, '/projects?archived=false')).items.some(project => project.id === a.id));
+    const archivedCapture = await call(i, '/inspection-points', {
+      client_uuid: randomUUID(), project_id: a.id, category: 'note',
+      latitude: 25, longitude: 51, captured_at: new Date().toISOString(),
+    });
+    assert.equal(archivedCapture.data.error?.code, 'PROJECT_ARCHIVED');
+    assert.equal((await browserGet(assigned, photoUrl)).status(), 200);
+    console.log('PASS archive blocks new capture while preserving authorized issued PDF access.');
     const deleted = await fetch(
       api + '/v1/projects/' + a.id + '/members/' + clients[0].userId,
       { method: 'DELETE', headers: { authorization: 'Bearer ' + m } },
     );
     assert.equal(deleted.status, 200);
     assert.equal((await assigned.goto(exact)).status(), 404);
-    assert.equal((await assigned.request.get(photoUrl)).status(), 404);
+    assert.equal((await browserGet(assigned, photoUrl)).status(), 404);
     await assigned.goto(web + '/client');
     await assigned
       .getByText('No projects assigned.', { exact: true })

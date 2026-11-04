@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import type { AuthUser } from '../auth/auth.types';
 import { ApiException } from '../common/api-exception';
 import { ErrorCode } from '../common/errors';
@@ -182,9 +182,16 @@ export class InspectionPointsService {
       .where(and(...filters))
       .orderBy(desc(inspectionPoints.capturedAt), desc(inspectionPoints.id))
       .limit(limit + 1);
+    const page = rows.slice(0, limit);
+    const releases = actor.role === 'manager' && page.length
+      ? await this.db.select({ pointId: releasedFindings.pointId, summary: releasedFindings.summary })
+        .from(releasedFindings).where(inArray(releasedFindings.pointId, page.map(row => row.id)))
+      : [];
+    const byPoint = new Map(releases.map(row => [row.pointId, { summary: row.summary }]));
     const items = [];
-    for (const row of rows.slice(0, limit)) {
-      items.push(await this.loadPublic(row.id));
+    for (const row of page) {
+      const point = await this.loadPublic(row.id);
+      items.push(actor.role === 'manager' ? { ...point, release: byPoint.get(row.id) ?? null } : point);
     }
     return { items, next_cursor: rows.length > limit ? rows[limit - 1].id : null };
   }
@@ -206,7 +213,7 @@ export class InspectionPointsService {
     if (row.version !== input.version) {
       throw new ApiException(ErrorCode.CONFLICT_VERSION, { current_version: row.version });
     }
-    await this.db
+    const updated = await this.db
       .update(inspectionPoints)
       .set({
         ...(input.remarks !== undefined ? { remarks: input.remarks } : {}),
@@ -216,7 +223,12 @@ export class InspectionPointsService {
         ...(input.status !== undefined ? { status: input.status } : {}),
         version: row.version + 1,
       })
-      .where(eq(inspectionPoints.id, id));
+      .where(and(eq(inspectionPoints.id, id), eq(inspectionPoints.version, input.version)))
+      .returning({ id: inspectionPoints.id });
+    if (!updated.length) {
+      const current = await this.requirePoint(actor, id);
+      throw new ApiException(ErrorCode.CONFLICT_VERSION, { current_version: current.version });
+    }
     return { point: await this.loadPublic(id) };
   }
 
