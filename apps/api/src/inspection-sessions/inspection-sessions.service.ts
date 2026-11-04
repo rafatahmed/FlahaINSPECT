@@ -75,7 +75,7 @@ export class InspectionSessionsService {
       await db.execute(
         sql`UPDATE inspection_sessions SET last_contact_at=now() WHERE id=${visit.id}::uuid`,
       );
-      return { session: await this.publicSession(db, visit) };
+      return { session: await this.read(db, visit.id) };
     });
   }
   async end(actor: AuthUser, id: string, input: EndSessionDto) {

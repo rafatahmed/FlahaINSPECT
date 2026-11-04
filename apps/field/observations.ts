@@ -47,7 +47,7 @@ async function syncEvidence(row: Row, onProgress?: (status: string) => void) {
   onProgress?.('Observation accepted - preparing photo');
   const file = photoFile(row.photo);
   const { photo } = await api('/photos', { client_uuid: row.photo, inspection_point_client_uuid: row.id,
-    project_id: point.project_id, byte_size: file.size, sha256: row.hash, content_type: 'image/jpeg' });
+    project_id: point.project_id, session_device_id: (point as Point & {session_device_id?:string}).session_device_id, byte_size: file.size, sha256: row.hash, content_type: 'image/jpeg' });
   if (photo.status !== 'ready' && photo.status !== 'processing') {
     if (!photo.upload_token || !photo.upload_url) throw new Error('Photo is ' + photo.status);
     const headers = { Authorization: 'Bearer ' + photo.upload_token, 'Tus-Resumable': '1.0.0' };

@@ -18,6 +18,7 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 - Freeze final inventories and accept only their saved observations/photos after ending. Reconciliation checks ownership, device identity, current access, sequence and server photo readiness.
 - Show last-contact, pending/failed and removed counts in web and Expo manager workspaces. Active or unreconciled visits never imply complete sync.
 - Preserve legacy queues and numbered sessions with additive migrations. Historical gaps without recoverable allocation identities prevent a completeness claim; no historical identities are invented.
+- Restrict late photo registration to the owning inspector/device and accept bounded inventories of up to 10,000 allocations through a 4 MB JSON request limit. New visits stop allocating at this limit; oversized older visits remain active so evidence can still sync.
 - Real database, SQLite and browser acceptance cover lifecycle behavior. Physical-iPhone offline/accessibility verification remains a separate required acceptance step.
 
 

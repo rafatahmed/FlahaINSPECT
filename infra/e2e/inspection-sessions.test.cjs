@@ -131,3 +131,21 @@ test('late photo identity and current project access are enforced for ended sess
  await assert.rejects(sessions.list(inspector,project),e=>e.getStatus()===404);
  await pool.query('INSERT INTO project_members(project_id,user_id) VALUES($1,$2)',[project,inspector.id]);
 });
+test('only the owning inspector and phone can register ended-session photos',async()=>{
+ const {InspectionSessionsService}=require('../../apps/api/dist/inspection-sessions/inspection-sessions.service');const sessions=new InspectionSessionsService(createDb(pool));
+ const {PhotosService}=require('../../apps/api/dist/photos/photos.service');const photoService=new PhotosService(createDb(pool),{signedGet:async()=>null});
+ const id=randomUUID(),device=randomUUID(),photo=randomUUID(),started='2026-11-04T08:00:00.000Z';
+ const input=capture({session_client_uuid:id,session_device_id:device,session_started_at:started,observation_number:1});
+ const registered=await sessions.register(inspector,{client_uuid:id,project_id:project,device_id:device,started_at:started});
+ assert.ok(registered.session.last_contact_at);
+ await sessions.end(inspector,id,{device_id:device,ended_at:'2026-11-04T10:00:00.000Z',allocated_count:1,observations:[{client_uuid:input.client_uuid,observation_number:1,photo_client_uuid:photo,disposition:'saved'}]});
+ await service.create(inspector,input);
+ const other={id:randomUUID(),role:'inspector'};
+ await pool.query("INSERT INTO users(id,email,password_hash,full_name,role) VALUES($1,$2,'unused','Other','inspector')",[other.id,other.id+'@example.test']);
+ await pool.query('INSERT INTO project_members(project_id,user_id) VALUES($1,$2)',[project,other.id]);
+ const payload={client_uuid:photo,inspection_point_client_uuid:input.client_uuid,project_id:project,sha256:'d'.repeat(64),byte_size:1,session_device_id:device};
+ await assert.rejects(photoService.register(other,payload,'127.0.0.1'),e=>e.getStatus()===403);
+ await assert.rejects(photoService.register(inspector,{...payload,session_device_id:randomUUID()},'127.0.0.1'),e=>e.getStatus()===409);
+ assert.equal((await photoService.register(inspector,payload,'127.0.0.1')).status,201);
+ await assert.rejects(photoService.register(other,payload,'127.0.0.1'),e=>e.getStatus()===403);
+});

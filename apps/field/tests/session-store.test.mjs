@@ -73,3 +73,11 @@ test('deleted allocations remain in final inventory rather than uploaded evidenc
  assert.deepEqual(JSON.parse(end.manifest),[{client_uuid:'one',observation_number:1,photo_client_uuid:'photo',disposition:'deleted'}]);
  assert.equal(end.next_number,2);sql.close();
 });
+test('new visits stop allocating before the final inventory can exceed its limit',()=>{
+ const {sql,store}=fixture();store.start('a','project','visit','phone','2026-11-04T09:00:00.000Z');
+ sql.exec('UPDATE inspection_session SET next_number=10000');
+ store.save('a','visit',{client_uuid:'last',project_id:'project'},'last-photo','hash');
+ assert.throws(()=>store.save('a','visit',{client_uuid:'overflow',project_id:'project'},'overflow-photo','hash'),/limit/);
+ assert.equal(sql.prepare('SELECT count(*) AS n FROM observation').get().n,1);
+ sql.close();
+});

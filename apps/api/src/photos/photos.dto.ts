@@ -1,6 +1,9 @@
 import { IsIn, IsInt, IsOptional, IsString, IsUUID, Matches, Max, MaxLength, Min } from 'class-validator';
 
 export class RegisterPhotoDto {
+  @IsOptional()
+  @IsUUID()
+  session_device_id?: string;
   @IsUUID()
   client_uuid!: string;
 
