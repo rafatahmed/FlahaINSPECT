@@ -92,3 +92,15 @@ test('an oversized upgraded visit can close capture and start another without lo
  assert.throws(()=>store.save('a','old',{client_uuid:'new',project_id:'project'},'new-photo','hash'),/ended/);
  assert.equal(sql.prepare('SELECT photo FROM observation WHERE id=?').get('saved').photo,'saved-photo');sql.close();
 });
+test('recovered-phone closure freezes the durable inventory and retains closure history on restart',()=>{
+ const {sql,db,store}=fixture();store.start('a','project','visit','phone','2026-11-04T09:00:00.000Z');
+ store.save('a','visit',{client_uuid:'saved',project_id:'project'},'saved-photo','hash');
+ const closure={id:'closure-one',actor_id:'manager',closed_at:'2026-11-04T10:00:00.000Z',reason:'Phone lost'};
+ const recovered=store.recover('a','visit',closure);
+ assert.ok(recovered.ended_at);assert.deepEqual(JSON.parse(recovered.admin_closure),closure);
+ const reopened=createSessionStore(db);assert.equal(reopened.current('a','project'),null);
+ assert.throws(()=>reopened.save('a','visit',{client_uuid:'new',project_id:'project'},'new-photo','hash'),/ended/);
+ assert.equal(reopened.recover('a','visit',closure).manifest,recovered.manifest);
+ assert.equal(reopened.start('a','project','new-visit','phone','2026-11-04T11:00:00.000Z').id,'new-visit');
+ assert.equal(sql.prepare('SELECT photo FROM observation WHERE id=?').get('saved').photo,'saved-photo');sql.close();
+});

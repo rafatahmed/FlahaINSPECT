@@ -13,6 +13,7 @@ import type { AuthUser } from '../auth/auth.types';
 import { InspectionSessionsService } from './inspection-sessions.service';
 import {
   EndSessionDto,
+  CloseSessionDto,
   RegisterSessionDto,
   SessionSyncDto,
 } from './inspection-sessions.dto';
@@ -25,6 +26,14 @@ export class InspectionSessionsController {
     @Body() body: RegisterSessionDto,
   ) {
     return this.sessions.register(actor, body);
+  }
+  @Post('inspection-sessions/:id/close')
+  close(
+    @CurrentUser() actor: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: CloseSessionDto,
+  ) {
+    return this.sessions.close(actor, id, body);
   }
   @Post('inspection-sessions/:id/end') end(
     @CurrentUser() actor: AuthUser,

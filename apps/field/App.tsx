@@ -7,7 +7,7 @@ import { Paths } from 'expo-file-system';
 import { randomUUID } from 'expo-crypto';
 import * as SplashScreen from 'expo-splash-screen';
 import { ApiError, api, login, logout, origin, restore, type Project, type Session } from './api';
-import { db, list, photoFile, save, sync, sessions, startInspectionSession, localSessions, reconcileSession, type Category } from './observations';
+import { db, list, photoFile, save, sync, sessions, startInspectionSession, localSessions, reconcileSession, refreshSessionClosure, type Category } from './observations';
 import { SessionStartScreen } from './session-start-screen';
 import { LoginScreen } from './login-screen';
 import { InspectionList } from './inspection-list';
@@ -181,7 +181,14 @@ export default function App() {
       {page === 'findings' && project && session.user.role !== 'inspector' ? <FindingsScreen key={project.id} project={project} manager={session.user.role === 'manager'} onBack={back}/> :
       page === 'map' && project ? <ProjectMap onReview={session.user.role === 'manager' ? () => setPage('findings') : undefined} project={project} rows={projectRows.map(row => ({
         id: row.id, point: row.point, image: { uri: photoFile(row.photo).uri },
-      }))} onBack={back} onCapture={() => {setMessage(''); setPage(sessions.current(owner, project.id) ? 'capture' : 'session-start');}}
+      }))} onBack={back} onCapture={() => run(async()=>{
+          const visit=sessions.current(owner,project.id);
+          if(visit && !captureOnlyPilot) {
+            try { await refreshSessionClosure(owner,visit.id); }
+            catch(error) { if(!(error instanceof TypeError)) throw error; }
+          }
+          setPage(sessions.current(owner,project.id)?'capture':'session-start');
+        })}
         onWork={() => {setMessage(''); setPage('work');}} /> :
       page === 'session-start' && project && !project.is_archived ? <SessionStartScreen projectName={project.name}
         busy={busy} message={message} onBack={back} onStart={() => run(async () => {
@@ -203,7 +210,7 @@ export default function App() {
         })}/> :
       project && <InspectionList projectName={project.name} busy={busy} message={message}
           activeSession={sessions.current(owner,project.id)?.id}
-          sessionSummary={localSessions(owner,project.id).map(visit=>'Session '+visit.id+' — '+(visit.capture_closed_at?'Capture closed locally; oversized legacy inventory needs server support. Evidence can sync; completeness unknown':visit.ended_at?'Ended; check sync to confirm completion':'Active; sync completeness not confirmed')).join('\n')}
+          sessionSummary={localSessions(owner,project.id).map(visit=>'Session '+visit.id+' — '+(visit.admin_closure?'Administratively closed: '+JSON.parse(visit.admin_closure).reason+'; saved evidence retained':visit.capture_closed_at?'Capture closed locally; oversized legacy inventory needs server support. Evidence can sync; completeness unknown':visit.ended_at?'Ended; check sync to confirm completion':'Active; sync completeness not confirmed')).join('\n')}
           onEndSession={() => Alert.alert('End this inspection session?', 'Saved evidence can still sync. Further captures will start a new visit.',[
             {text:'Cancel',style:'cancel'}, {text:'End session',onPress:()=>run(async()=>{
               const visit=sessions.current(owner,project.id);

@@ -59,9 +59,10 @@ export class PhotosService {
     }
 
     if (point[0].sessionId) {
-      const { rows } = await this.db.execute<{ inspector_id: string; device_id: string; ended_at: Date | null }>(sql`SELECT inspector_id,device_id,ended_at FROM inspection_sessions WHERE id=${point[0].sessionId}::uuid`);
+      const { rows } = await this.db.execute<{ inspector_id: string; device_id: string; ended_at: Date | null; closure: unknown }>(sql`SELECT inspector_id,device_id,ended_at,closure FROM inspection_sessions WHERE id=${point[0].sessionId}::uuid`);
       const visit = rows[0];
       if (!visit || visit.inspector_id !== actor.id) throw new ApiException(ErrorCode.FORBIDDEN);
+      if(visit.closure && !visit.ended_at) throw new ApiException(ErrorCode.CONFLICT_IDEMPOTENCY,undefined,'Closed visit requires original-phone inventory reconciliation.');
       // Older numbered clients may omit the device while a visit remains active.
       if ((visit.ended_at || input.session_device_id !== undefined) && input.session_device_id !== visit.device_id) {
         throw new ApiException(ErrorCode.CONFLICT_IDEMPOTENCY, undefined, 'Resume this session from its original capture phone.');

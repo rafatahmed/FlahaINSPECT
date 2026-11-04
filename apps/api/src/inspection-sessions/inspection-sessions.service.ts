@@ -6,6 +6,7 @@ import { ApiException } from '../common/api-exception';
 import { ErrorCode } from '../common/errors';
 import type {
   EndSessionDto,
+  CloseSessionDto,
   RegisterSessionDto,
   SessionSyncDto,
   InventoryEntry,
@@ -25,6 +26,12 @@ type Visit = {
   known_failed: number | null;
   complete_requested: boolean;
   last_contact_at: Date | null;
+  closure: {
+    id: string;
+    actor_id: string;
+    closed_at: string;
+    reason: string;
+  } | null;
 };
 const conflict = () => new ApiException(ErrorCode.CONFLICT_IDEMPOTENCY);
 @Injectable()
@@ -78,9 +85,48 @@ export class InspectionSessionsService {
       return { session: await this.read(db, visit.id) };
     });
   }
+  async close(actor: AuthUser, id: string, input: CloseSessionDto) {
+    if (actor.role !== 'manager') throw new ApiException(ErrorCode.FORBIDDEN);
+    const reason = input.reason.trim();
+    if (!reason || reason.length > 1000)
+      throw new ApiException(ErrorCode.VALIDATION_ERROR);
+    return this.db.transaction(async (db) => {
+      const { rows } = await db.execute<Visit>(
+        sql`SELECT * FROM inspection_sessions WHERE id=${id}::uuid FOR UPDATE`,
+      );
+      const visit = rows[0];
+      if (!visit) throw new ApiException(ErrorCode.NOT_FOUND);
+      await this.access(db, actor, visit.project_id, true);
+      if (visit.closure) {
+        if (
+          visit.closure.id !== input.request_id ||
+          visit.closure.actor_id !== actor.id ||
+          visit.closure.reason !== reason
+        )
+          throw conflict();
+      } else {
+        if (visit.ended_at) throw conflict();
+        await db.execute(
+          sql`UPDATE inspection_sessions SET closure=jsonb_build_object('id',${input.request_id}::text,'actor_id',${actor.id}::text,'closed_at',now(),'reason',${reason}::text),complete_requested=false WHERE id=${id}::uuid`,
+        );
+      }
+      return { session: await this.read(db, id) };
+    });
+  }
+  private acknowledgeClosure(visit: Visit, closureId?: string) {
+    if (visit.closure && visit.closure.id !== closureId) {
+      throw new ApiException(
+        ErrorCode.CONFLICT_IDEMPOTENCY,
+        undefined,
+        'This visit was administratively closed. Reconcile its saved inventory from the original phone.',
+      );
+    }
+    if (!visit.closure && closureId) throw conflict();
+  }
   async end(actor: AuthUser, id: string, input: EndSessionDto) {
     return this.db.transaction(async (db) => {
       const visit = await this.owned(db, actor, id, input.device_id);
+      this.acknowledgeClosure(visit, input.closure_id);
       const manifest = [...input.observations].sort(
         (a, b) => a.observation_number - b.observation_number,
       );
@@ -174,6 +220,8 @@ export class InspectionSessionsService {
   async syncState(actor: AuthUser, id: string, input: SessionSyncDto) {
     return this.db.transaction(async (db) => {
       const visit = await this.owned(db, actor, id, input.device_id);
+      this.acknowledgeClosure(visit, input.closure_id);
+      if (visit.closure && !visit.ended_at) throw conflict();
       if (
         input.failed > input.pending ||
         input.sequence < visit.sequence ||
@@ -210,6 +258,7 @@ export class InspectionSessionsService {
       inspector_id: visit.inspector_id,
       started_at: visit.started_at,
       ended_at: visit.ended_at,
+      closure: visit.closure,
       last_contact_at: visit.last_contact_at,
       known_pending: visit.known_pending,
       known_failed: visit.known_failed,
@@ -218,7 +267,7 @@ export class InspectionSessionsService {
         visit.manifest?.filter((e) => e.disposition === 'deleted').length ?? 0,
       sync_state: complete
         ? 'complete'
-        : visit.known_pending === null
+        : (visit.closure && !visit.ended_at) || visit.known_pending === null
           ? 'unknown'
           : 'pending',
     };

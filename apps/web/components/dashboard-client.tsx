@@ -76,7 +76,7 @@ export function DashboardClient({
           </select>
         </label>
       </div>
-      {projectId && <SessionStatus projectId={projectId}/>}
+      {projectId && <SessionStatus projectId={projectId} canClose={projectPath==='/dashboard'}/>}
       <h2>Project totals</h2>
       <div className="cards">
         <div className="card">

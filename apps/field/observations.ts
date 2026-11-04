@@ -98,19 +98,25 @@ async function syncEvidence(row: Row, onProgress?: (status: string) => void) {
 // Preserve local failure information across relaunch; server reports it as last known state.
 db.execSync('CREATE TABLE IF NOT EXISTS observation_failure(id TEXT PRIMARY KEY,message TEXT NOT NULL);');
 export const localSessions = (owner: string, projectId: string) => db.getAllSync<import('./session-store').InspectionSession>(
-  'SELECT s.*,l.ended_at,l.manifest,l.sequence,c.closed_at AS capture_closed_at FROM inspection_session s LEFT JOIN session_lifecycle l ON l.id=s.id LEFT JOIN session_capture_closed c ON c.id=s.id WHERE s.owner=? AND s.project_id=? ORDER BY s.rowid DESC',owner,projectId);
-export async function reconcileSession(owner: string, id: string) {
- const visit=db.getFirstSync<import('./session-store').InspectionSession>('SELECT s.*,l.ended_at,l.manifest,l.sequence,c.closed_at AS capture_closed_at FROM inspection_session s LEFT JOIN session_lifecycle l ON l.id=s.id LEFT JOIN session_capture_closed c ON c.id=s.id WHERE s.owner=? AND s.id=?',owner,id);
+  'SELECT s.*,l.ended_at,l.manifest,l.sequence,c.closed_at AS capture_closed_at,a.closure AS admin_closure FROM inspection_session s LEFT JOIN session_lifecycle l ON l.id=s.id LEFT JOIN session_capture_closed c ON c.id=s.id LEFT JOIN session_admin_closure a ON a.id=s.id WHERE s.owner=? AND s.project_id=? ORDER BY s.rowid DESC',owner,projectId);
+export async function refreshSessionClosure(owner: string, id: string) {
+ const visit=db.getFirstSync<import('./session-store').InspectionSession>('SELECT s.*,l.ended_at,l.manifest,l.sequence,c.closed_at AS capture_closed_at,a.closure AS admin_closure FROM inspection_session s LEFT JOIN session_lifecycle l ON l.id=s.id LEFT JOIN session_capture_closed c ON c.id=s.id LEFT JOIN session_admin_closure a ON a.id=s.id WHERE s.owner=? AND s.id=?',owner,id);
  if(!visit) throw new Error('Inspection session not found on this phone.');
- await api('/inspection-sessions',{client_uuid:id,project_id:visit.project_id,device_id:visit.device_id,started_at:visit.started_at});
- if(visit.ended_at) await api('/inspection-sessions/'+id+'/end',{device_id:visit.device_id,ended_at:visit.ended_at,allocated_count:visit.next_number-1,observations:JSON.parse(visit.manifest!)});
+ const registered=await api('/inspection-sessions',{client_uuid:id,project_id:visit.project_id,device_id:visit.device_id,started_at:visit.started_at});
+ if(registered.session.closure) return sessions.recover(owner,id,registered.session.closure);
+ return visit;
+}
+export async function reconcileSession(owner:string,id:string) {
+ const visit=await refreshSessionClosure(owner,id);
+ const closureId=visit.admin_closure?JSON.parse(visit.admin_closure).id:undefined;
+ if(visit.ended_at) await api('/inspection-sessions/'+id+'/end',{device_id:visit.device_id,closure_id:closureId,ended_at:visit.ended_at,allocated_count:visit.next_number-1,observations:JSON.parse(visit.manifest!)});
  const rows=list(owner).filter(row=>JSON.parse(row.point).session_client_uuid===id);
  const pending=rows.filter(row=>!row.ready).length;
  const failed=rows.filter(row=>!row.ready && db.getFirstSync('SELECT 1 FROM observation_failure WHERE id=?',row.id)).length;
  db.runSync('INSERT INTO session_lifecycle(id,sequence) VALUES(?,1) ON CONFLICT(id) DO UPDATE SET sequence=sequence+1',id);
  const sequence=db.getFirstSync<{sequence:number}>('SELECT sequence FROM session_lifecycle WHERE id=?',id)!.sequence;
  const complete=!!visit.ended_at && pending===0 && JSON.parse(visit.manifest!).length===visit.next_number-1;
- return (await api('/inspection-sessions/'+id+'/sync-state',{device_id:visit.device_id,sequence,pending,failed,complete})).session;
+ return (await api('/inspection-sessions/'+id+'/sync-state',{device_id:visit.device_id,closure_id:closureId,sequence,pending,failed,complete})).session;
 }
 export async function sync(row: Row,onProgress?: (status:string)=>void) {
  const owner=db.getFirstSync<{owner:string}>('SELECT owner FROM observation WHERE id=?',row.id)?.owner;
