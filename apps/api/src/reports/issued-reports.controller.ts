@@ -92,6 +92,9 @@ export class IssuedReportsController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: Issue,
   ) {
+    if (process.env.PDF_ENABLED === 'false') {
+      throw new ApiException(ErrorCode.FORBIDDEN, undefined, 'pdf disabled');
+    }
     await this.project(actor, id);
     const existing = await this.db.execute<{
       id: string;

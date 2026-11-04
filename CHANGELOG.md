@@ -14,6 +14,8 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Fixed
 
+- Client-report issuance now honors the PDF pause flag before evidence reads or queue writes, including retries while paused (#70).
+
 - Exhausted worker leases now fail their reports atomically, so an interrupted recovery remains retryable and cannot strand the project behind an active report (#69).
 
 - Managers can view generated PDFs in the browser or download them. Dashboard and PDF open-defect totals include open and in-progress defects (#39, #40).

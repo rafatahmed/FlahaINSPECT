@@ -10,7 +10,7 @@ Cadence for the internal Flaha R2 pilot. Defaults match the technical design. G-
 | Orphan object GC | Daily worker | Job type `gc_orphan_object`. Deletes unreferenced keys under `uploads/`, `photos/`, `thumbs/`, `reports/` after 48h. Deletes photo objects for projects archived longer than `RETENTION_ARCHIVE_MONTHS` (archive time = `projects.updated_at` when `is_archived`). |
 | Log retention | 30 days | API/worker structured logs. Do not ship tokens. |
 | Pause uploads | When storage cost spikes | Set `UPLOADS_ENABLED=false` on the API and restart. Register returns 403. |
-| Pause PDF | When Chromium/cost spikes | Set `PDF_ENABLED=false` on the API. Generate returns 403. |
+| Pause PDF | When Chromium/cost spikes | Set `PDF_ENABLED=false` on the API. Generate and client-report issuance POSTs return 403 before evidence reads or queue writes, including retries of accepted request IDs. Resume with the same request ID after re-enabling. Existing report viewing/download remains available; already-queued work is not cancelled. |
 | Seed users | Staging only | `SEED_PASSWORD` required; seed refuses `NODE_ENV=production`. |
 | Metrics scrape | Continuous | `GET /metrics` (Prometheus text). HTTP duration, TUS hook results, photo bytes, sync/photo lag histograms, `job_total` / `job_dead_letters` from SQL. |
 | Dead-letter jobs | Daily glance | `SELECT type, count(*) FROM jobs WHERE status = 'dead' GROUP BY 1;` Alert if the `job_dead_letters` gauge grows. |
