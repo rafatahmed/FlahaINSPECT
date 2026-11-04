@@ -62,6 +62,24 @@ export function ReportsClient({
     };
   }, [watchId]);
 
+  async function downloadPdf(id: string) {
+    setError(null);
+    try {
+      const response = await fetch(`/bff/reports/${id}/file?view=1`);
+      if (!response.ok || response.headers.get('content-type') !== 'application/pdf') {
+        throw new Error('Could not download this report.');
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `flaha-report-${id}.pdf`;
+      link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch {
+      setError('Could not download this report.');
+    }
+  }
+
   async function generate() {
     if (!projectId || busy) return;
     setBusy(true);
@@ -130,7 +148,14 @@ export function ReportsClient({
               <td>{r.point_count ?? '—'}</td>
               <td>
                 {r.status === 'ready' ? (
-                  <a href={`/bff/reports/${r.id}/file`}>Download</a>
+                  <>
+                    <a href={`/bff/reports/${r.id}/file?view=1`} target="_blank" rel="noopener">View PDF</a>{' · '}
+                    <a href={`/bff/reports/${r.id}/file`} onClick={event => {
+                      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+                      event.preventDefault();
+                      void downloadPdf(r.id);
+                    }}>Download</a>
+                  </>
                 ) : r.status === 'failed' ? (
                   <span className="error">{r.error_message ?? 'failed'}</span>
                 ) : (

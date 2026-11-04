@@ -275,7 +275,7 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         '200':
-          description: Counts
+          description: Project totals. open_defect_count includes non-deleted defects with open or in_progress status.
   /inspection-points:
     post:
       operationId: createInspectionPoint
@@ -612,6 +612,24 @@ paths:
       responses:
         '200':
           description: History
+  /reports/{id}/file:
+    get:
+      operationId: streamManagerReport
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      summary: Stream a ready manager PDF
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Private report bytes
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /reports/{id}:
     get:
       operationId: getReport
