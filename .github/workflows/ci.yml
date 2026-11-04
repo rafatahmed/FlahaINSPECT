@@ -73,6 +73,7 @@ jobs:
     if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.compose == 'true') }}
     name: docker compose smoke
     env:
+      CLIENT_ROLE_ENABLED: 'true'
       COMPOSE_FILE: infra/docker-compose.yml:infra/docker-compose.ci.yml
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -125,10 +126,27 @@ jobs:
           pnpm --filter @flaha/inspect-api db:seed
       - name: Pilot e2e login point tus list PDF
         env:
+          WEB_GATE_FIXTURE: ${{ runner.temp }}/web-gate.json
           API_BASE: http://127.0.0.1:3001
           TUSD_URL: http://127.0.0.1:1080/files/
           SEED_PASSWORD: ci-seed-password-only
         run: node infra/e2e/pilot-smoke.mjs
+      - name: Browser finding release and revocation
+        env:
+          WEB_URL: http://127.0.0.1:3000
+          API_BASE_URL: http://127.0.0.1:3001
+          WEB_GATE_FIXTURE: ${{ runner.temp }}/web-gate.json
+          DISPOSABLE_FINDINGS_TEST: '1'
+          SEED_PASSWORD: ci-seed-password-only
+        run: |
+          npm install --prefix "$RUNNER_TEMP/web-browser" --no-audit --no-fund --ignore-scripts playwright@1.56.1
+          export PW_RUNTIME="$RUNNER_TEMP/web-browser/node_modules/playwright"
+          export CHROME_PATH="$(command -v google-chrome)"
+          pnpm --filter @flaha/inspect-web... build
+          pnpm --filter @flaha/inspect-web start > "$RUNNER_TEMP/web.log" 2>&1 &
+          trap 'kill "$!" 2>/dev/null || true' EXIT
+          curl --retry 30 --retry-connrefused --retry-delay 1 --fail --silent "$WEB_URL/login" >/dev/null
+          node infra/e2e/web-finding-release.cjs
       - name: Hooks are not a host port
         run: |
           published="$(docker compose --env-file .env ps --format json)"
