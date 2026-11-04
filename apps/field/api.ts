@@ -33,7 +33,7 @@ export interface Session {
   origin: string; user: Profile; access_token: string; refresh_token: string;
 }
 export class ApiError extends Error {
-  constructor(readonly status: number) { super('API request failed (HTTP ' + status + ').'); }
+  constructor(readonly status: number, message = 'API request failed (HTTP ' + status + ').') { super(message); }
 }
 export async function restore(): Promise<Session | null> {
   if (!origin) return null;
@@ -50,7 +50,12 @@ async function request(path: string, token?: string, body?: unknown) {
   });
 }
 async function checked(res: Response) {
-  if (!res.ok) throw new ApiError(res.status);
+  if (!res.ok) {
+    const body=await res.json().catch(()=>null);
+    if(body?.error?.code==='PROJECT_ARCHIVED') throw new ApiError(res.status, 'This project is archived. Your evidence remains on this phone; ask your manager to restore access.');
+    if(res.status===403 || res.status===404) throw new ApiError(res.status, 'Project access or session support is unavailable. Your evidence remains on this phone; contact your manager.');
+    throw new ApiError(res.status);
+  }
   return res.json();
 }
 export async function login(email: string, password: string): Promise<Session> {

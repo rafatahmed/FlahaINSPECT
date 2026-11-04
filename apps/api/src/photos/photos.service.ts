@@ -58,6 +58,16 @@ export class PhotosService {
       throw new ApiException(ErrorCode.PROJECT_ARCHIVED);
     }
 
+    if (point[0].sessionId) {
+      const { rows } = await this.db.execute<{ inspector_id: string; device_id: string; ended_at: Date | null }>(sql`SELECT inspector_id,device_id,ended_at FROM inspection_sessions WHERE id=${point[0].sessionId}::uuid`);
+      const visit = rows[0];
+      if (!visit || visit.inspector_id !== actor.id) throw new ApiException(ErrorCode.FORBIDDEN);
+      // Older numbered clients may omit the device while a visit remains active.
+      if ((visit.ended_at || input.session_device_id !== undefined) && input.session_device_id !== visit.device_id) {
+        throw new ApiException(ErrorCode.CONFLICT_IDEMPOTENCY, undefined, 'Resume this session from its original capture phone.');
+      }
+    }
+
     const existingByClient = await this.db
       .select()
       .from(photos)
@@ -372,6 +382,7 @@ export class PhotosService {
 }
 
 export type RegisterInput = {
+  session_device_id?: string;
   client_uuid: string;
   inspection_point_client_uuid: string;
   project_id: string;

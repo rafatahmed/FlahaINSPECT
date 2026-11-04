@@ -1,3 +1,4 @@
+import { SessionStatus } from './session-status';
 import React, { useEffect, useState } from 'react';
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { api, ApiError, origin, restore, type Project } from './api';
@@ -58,6 +59,7 @@ export function FindingsScreen({ project, manager, onBack }: { project: Project;
       onPress={current ? () => {select(null); setMessage('');} : onBack}/>
     <Text style={s.body}>{project.name}</Text>
     <Text accessibilityRole="header" style={s.heading}>{manager ? 'Review findings' : 'Released findings'}</Text>
+    {manager && !current && <SessionStatus projectId={project.id} refresh={refresh}/>}
     {!!message && <Text accessibilityLiveRegion="polite" style={s.body}>{message}</Text>}
     {busy && <Text style={s.body}>Please wait…</Text>}
     {current ? <View style={s.card}>

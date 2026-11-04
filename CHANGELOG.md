@@ -12,6 +12,16 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ## [Unreleased]
 
+### Inspection session lifecycle (#85)
+
+- End visits durably on the capture phone while retaining pending evidence and permanent allocation history; follow-up photos start another visit.
+- Freeze final inventories and accept only their saved observations/photos after ending. Reconciliation checks ownership, device identity, current access, sequence and server photo readiness.
+- Show last-contact, pending/failed and removed counts in web and Expo manager workspaces. Active or unreconciled visits never imply complete sync.
+- Preserve legacy queues and numbered sessions with additive migrations. Historical gaps without recoverable allocation identities prevent a completeness claim; no historical identities are invented.
+- Restrict late photo registration to the owning inspector/device and accept bounded inventories of up to 10,000 allocations through a 4 MB JSON request limit. New visits stop allocating at this limit; oversized older visits can close local capture and start another visit while evidence still syncs and server completeness stays unknown.
+- Real database, SQLite and browser acceptance cover lifecycle behavior. Physical-iPhone offline/accessibility verification remains a separate required acceptance step.
+
+
 ### Numbered capture (spec #83, ticket 1)
 
 - Start a local inspection session in Expo and allocate permanent observation numbers atomically with saved evidence. Preserve legacy queues and resumable upload identities.

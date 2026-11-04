@@ -76,6 +76,42 @@ async function main() {
   await page.getByText('Session '+session+' / Observation 1',{exact:true}).waitFor();
   await page.reload();
   await page.getByText('Session '+session+' / Observation 1',{exact:true}).waitFor();
+  const expectedPhoto=randomUUID();
+  const ended=await request('/inspection-sessions/'+session+'/end',{
+   device_id:point.session_device_id,ended_at:new Date().toISOString(),allocated_count:2,
+   observations:[{client_uuid:point.client_uuid,observation_number:1,photo_client_uuid:expectedPhoto,disposition:'saved'},
+    {client_uuid:second.json.point.client_uuid,observation_number:2,photo_client_uuid:randomUUID(),disposition:'saved'}]
+  },token);
+  assert.equal(ended.status,201);
+  const progress=await request('/inspection-sessions/'+session+'/sync-state',{device_id:point.session_device_id,sequence:1,pending:2,failed:1,complete:false},token);
+  assert.equal(progress.status,201);
+  const premature=await request('/inspection-sessions/'+session+'/sync-state',{device_id:point.session_device_id,sequence:2,pending:0,failed:0,complete:true},token);
+  assert.equal(premature.status,409);
+  await page.goto(web+'/dashboard?project='+project.id);
+  const sessionCard=page.getByRole('heading',{name:'Session '+session,exact:true}).locator('..');
+  await sessionCard.getByText('Ended — pending',{exact:true}).waitFor();
+  await sessionCard.getByText(/Pending: 2; failed: 1/).waitFor();
+  await page.reload();
+  await page.getByRole('heading',{name:'Session '+session,exact:true}).locator('..').getByText('Ended — pending',{exact:true}).waitFor();
+  const otherEmail='session-peer-'+randomUUID()+'@example.test';
+  const otherUser=await request('/users',{email:otherEmail,password:env.SEED_PASSWORD,full_name:'Other inspector',role:'inspector'},managerToken);
+  assert.equal(otherUser.status,201);
+  assert.equal((await request('/projects/'+project.id+'/members',{user_id:otherUser.json.user.id,member_role:'inspector'},managerToken)).status,201);
+  const peerLogin=await loginWhenAllowed(()=>request('/auth/login',{email:otherEmail,password:env.SEED_PASSWORD}));
+  assert.equal(peerLogin.status,200);
+  const photoPayload={client_uuid:expectedPhoto,inspection_point_client_uuid:point.client_uuid,project_id:project.id,byte_size:1,sha256:'d'.repeat(64),session_device_id:point.session_device_id};
+  assert.equal((await request('/photos',photoPayload,peerLogin.json.access_token)).status,403);
+  assert.equal((await request('/photos',{...photoPayload,session_device_id:randomUUID()},token)).status,409);
+  assert.equal((await request('/photos',photoPayload,token)).status,201);
+  console.log('PASS: actual HTTP rejects another inspector and phone at late-photo registration');
+  const largeId=randomUUID(), largeDevice=randomUUID();
+  assert.equal((await request('/inspection-sessions',{client_uuid:largeId,project_id:project.id,device_id:largeDevice,started_at:point.session_started_at},token)).status,201);
+  const largeEnd={device_id:largeDevice,ended_at:new Date().toISOString(),allocated_count:10000,
+   observations:Array.from({length:10000},(_,index)=>({client_uuid:randomUUID(),observation_number:index+1,photo_client_uuid:randomUUID(),disposition:'saved'}))};
+  assert.ok(Buffer.byteLength(JSON.stringify(largeEnd))>102400);
+  assert.equal((await request('/inspection-sessions/'+largeId+'/end',largeEnd,token)).status,201);
+  console.log('PASS: actual HTTP accepts the maximum 10,000-entry inventory');
+  console.log('PASS: manager browser shows ended visit with pending/failed evidence and rejects premature completion');
   console.log('PASS: real API retry and manager browser session/number display after reload');
  } finally { await browser.close(); }
 }

@@ -127,6 +127,14 @@ export const inspectionSessions = pgTable('inspection_sessions', {
   inspectorId: uuid('inspector_id').notNull().references(() => users.id),
   deviceId: uuid('device_id').notNull(),
   startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+    endedAt: timestamp('ended_at', { withTimezone: true }),
+    manifest: jsonb('manifest'),
+    allocatedCount: integer('allocated_count'),
+    sequence: integer('sequence').notNull().default(0),
+    knownPending: integer('known_pending'),
+    knownFailed: integer('known_failed'),
+    completeRequested: boolean('complete_requested').notNull().default(false),
+    lastContactAt: timestamp('last_contact_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 

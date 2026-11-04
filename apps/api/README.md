@@ -58,3 +58,14 @@ after migrating the isolated database twice with DISPOSABLE_REPORT_TEST=1.
 Browser acceptance: node infra/e2e/web-numbered-capture.cjs with disposable seeded
 accounts, API_BASE_URL, WEB_URL, SEED_PASSWORD, DISPOSABLE_FINDINGS_TEST=1 and
 PW_RUNTIME/CHROME_PATH as needed. Do not use a shared or production database.
+
+## Inspection session lifecycle
+
+`POST /v1/inspection-sessions` registers an owning inspector/phone visit (client_uuid, project_id, device_id, started_at). An identical retry preserves identity.
+`POST /v1/inspection-sessions/:id/end` freezes ended_at, allocated_count and observations (client_uuid, observation_number, photo_client_uuid, disposition saved/deleted). The final inventory is immutable; missing historical allocations cannot establish completeness. The request validates at most 10,000 inventory entries within the 4 MB JSON request limit. New phone sessions stop allocating after 10,000 observations so their inventory always fits; older oversized sessions can close capture locally and start a replacement visit while retaining active evidence uploads. They cannot claim server completion until their oversized inventory is supported; no inventory is discarded or fabricated.
+`POST /v1/inspection-sessions/:id/sync-state` accepts device_id, a monotonically increasing sequence, pending/failed counts and complete. Completion requires an ended, fully accounted inventory and ready server photos; removed entries are not counted as uploaded photos. Rejected requests leave the prior state unchanged.
+`GET /v1/projects/:id/inspection-sessions` reports authorized sessions, lifecycle, last contact and last-known counts. A disconnected/active session is never inferred complete from an empty server queue. Clients cannot access this staff endpoint.
+
+Apply migration 0005 to the API before deploying the session-aware app. Existing numbered and legacy evidence remain valid; old APIs cannot accept lifecycle operations, so new clients retain evidence and explain the compatibility/access failure. Administrative closure and removal workflows are separate tickets.
+
+Numbered photo registration is restricted to the owning inspector. Ended sessions also require session_device_id matching the original phone. Active older numbered clients may omit that field during rollout.

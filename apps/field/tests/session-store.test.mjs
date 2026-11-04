@@ -50,3 +50,45 @@ test('number exhaustion preserves the saved ledger and asks for another session'
  assert.equal(sql.prepare('SELECT count(*) AS n FROM observation').get().n,0);
  sql.close();
 });
+test('ending freezes saved evidence across restart and permits a new visit', () => {
+ const {sql,db,store}=fixture();
+ store.start('a','project','visit','phone','2026-11-04T09:00:00.000Z');
+ store.save('a','visit',{client_uuid:'one',project_id:'project'},'photo-one','hash');
+ const ended=store.end('a','visit','2026-11-04T10:00:00.000Z');
+ assert.equal(ended.ended_at,'2026-11-04T10:00:00.000Z');
+ assert.deepEqual(JSON.parse(ended.manifest),[{client_uuid:'one',observation_number:1,photo_client_uuid:'photo-one',disposition:'saved'}]);
+ const reopened=createSessionStore(db);
+ assert.equal(reopened.current('a','project'),null);
+ assert.throws(()=>reopened.save('a','visit',{client_uuid:'two',project_id:'project'},'photo-two','hash'),/ended/);
+ assert.equal(reopened.end('a','visit','2026-11-05T10:00:00.000Z').ended_at,ended.ended_at);
+ assert.equal(reopened.start('a','project','next','phone','2026-11-05T10:00:00.000Z').next_number,1);
+ assert.equal(sql.prepare('SELECT photo FROM observation WHERE id=?').get('one').photo,'photo-one');
+ sql.close();
+});
+test('deleted allocations remain in final inventory rather than uploaded evidence',()=>{
+ const {sql,store}=fixture();store.start('a','project','visit','phone','2026-11-04T09:00:00.000Z');
+ store.save('a','visit',{client_uuid:'one',project_id:'project'},'photo','hash');
+ sql.prepare('DELETE FROM observation WHERE id=?').run('one');
+ const end=store.end('a','visit','2026-11-04T10:00:00.000Z');
+ assert.deepEqual(JSON.parse(end.manifest),[{client_uuid:'one',observation_number:1,photo_client_uuid:'photo',disposition:'deleted'}]);
+ assert.equal(end.next_number,2);sql.close();
+});
+test('new visits stop allocating before the final inventory can exceed its limit',()=>{
+ const {sql,store}=fixture();store.start('a','project','visit','phone','2026-11-04T09:00:00.000Z');
+ sql.exec('UPDATE inspection_session SET next_number=10000');
+ store.save('a','visit',{client_uuid:'last',project_id:'project'},'last-photo','hash');
+ assert.throws(()=>store.save('a','visit',{client_uuid:'overflow',project_id:'project'},'overflow-photo','hash'),/limit/);
+ assert.equal(sql.prepare('SELECT count(*) AS n FROM observation').get().n,1);
+ sql.close();
+});
+test('an oversized upgraded visit can close capture and start another without losing pending evidence',()=>{
+ const {sql,db,store}=fixture();store.start('a','project','old','phone','2026-11-04T09:00:00.000Z');
+ store.save('a','old',{client_uuid:'saved',project_id:'project'},'saved-photo','hash');
+ sql.exec('UPDATE inspection_session SET next_number=10002');
+ const closed=store.end('a','old','2026-11-04T10:00:00.000Z');
+ assert.ok(closed.capture_closed_at);assert.equal(closed.ended_at,null);
+ assert.equal(createSessionStore(db).current('a','project'),null);
+ assert.equal(store.start('a','project','replacement','phone','2026-11-04T11:00:00.000Z').id,'replacement');
+ assert.throws(()=>store.save('a','old',{client_uuid:'new',project_id:'project'},'new-photo','hash'),/ended/);
+ assert.equal(sql.prepare('SELECT photo FROM observation WHERE id=?').get('saved').photo,'saved-photo');sql.close();
+});
