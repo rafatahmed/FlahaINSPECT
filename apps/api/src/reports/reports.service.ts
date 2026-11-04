@@ -49,25 +49,29 @@ export class ReportsService {
     }
 
     try {
-      const [report] = await this.db
-        .insert(reports)
-        .values({
-          projectId,
-          requestedBy: actor.id,
-          status: 'queued',
-          title: title ?? null,
-          pointCount: count,
-        })
-        .returning();
-      await this.db.insert(jobs).values({
-        type: 'generate_report',
-        status: 'pending',
-        payload: { report_id: report.id },
+      const report = await this.db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(reports)
+          .values({
+            projectId,
+            requestedBy: actor.id,
+            status: 'queued',
+            title: title ?? null,
+            pointCount: count,
+          })
+          .returning();
+        await tx.insert(jobs).values({
+          type: 'generate_report',
+          status: 'pending',
+          payload: { report_id: created.id },
+        });
+        return created;
       });
       return { status: 202 as const, report: this.publicReport(report, null) };
     } catch (err) {
-      const code = (err as { code?: string }).code;
-      if (code === '23505') {
+      const failure = err as { code?: string; constraint?: string; cause?: { code?: string; constraint?: string } };
+      const pgError = failure.cause ?? failure;
+      if (pgError.code === '23505' && pgError.constraint === 'reports_one_active_per_project') {
         const again = await this.db
           .select({ id: reports.id })
           .from(reports)

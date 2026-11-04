@@ -12,7 +12,11 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ## [Unreleased]
 
+### Fixed
+
 - Managers can view generated PDFs in the browser or download them. Dashboard and PDF open-defect totals include open and in-progress defects (#39, #40).
+
+- Report creation now queues its worker job atomically. Failed attempts release the worker lease and mark exhausted reports as failed (#60, #38).
 
 ### Added
 
