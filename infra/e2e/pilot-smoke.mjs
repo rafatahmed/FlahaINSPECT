@@ -2,6 +2,7 @@
  * Compose e2e: login → point → tus → list → PDF.
  * Requires a seeded API (manager@local.flaha) and running tusd + worker.
  */
+import { writeFile } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 
 const API = (process.env.API_BASE ?? 'http://127.0.0.1:3001').replace(/\/$/, '');
@@ -72,9 +73,12 @@ async function main() {
   const projectId = projects.json?.items?.[0]?.id;
   if (!projectId) fail('projects', 'no seeded project');
 
+  const captureToken = process.env.WEB_GATE_FIXTURE
+    ? (await json('POST', '/v1/auth/login', { body: { email: 'inspector@local.flaha', password: PASSWORD }, expect: [200] })).json.access_token
+    : token;
   const clientUuid = randomUUID();
   const point = await json('POST', '/v1/inspection-points', {
-    token,
+    token: captureToken,
     body: {
       client_uuid: clientUuid,
       project_id: projectId,
@@ -92,7 +96,7 @@ async function main() {
   const photoClient = randomUUID();
   const sha256 = createHash('sha256').update(PNG).digest('hex');
   const registered = await json('POST', '/v1/photos', {
-    token,
+    token: captureToken,
     body: {
       client_uuid: photoClient,
       inspection_point_client_uuid: clientUuid,
@@ -147,7 +151,7 @@ async function main() {
   for (let i = 0; i < 30; i += 1) {
     const photo = await json('GET', `/v1/photos/${photoId}`, { token, expect: [200] });
     photoStatus = photo.json?.photo?.status ?? '';
-    if (photoStatus === 'processing' || photoStatus === 'ready') break;
+    if (photoStatus === 'ready' || (!process.env.WEB_GATE_FIXTURE && photoStatus === 'processing')) break;
     await sleep(2000);
   }
   if (photoStatus !== 'processing' && photoStatus !== 'ready') {
@@ -186,6 +190,10 @@ async function main() {
     fail('metrics-series', body.slice(0, 400));
   }
 
+  if (process.env.WEB_GATE_FIXTURE) {
+    if (photoStatus !== 'ready') fail('web fixture', 'Evidence did not reach ready');
+    await writeFile(process.env.WEB_GATE_FIXTURE, JSON.stringify({ projectId, pointId }));
+  }
   console.log('e2e ok', { projectId, pointId, photoId, photoStatus, reportId });
 }
 

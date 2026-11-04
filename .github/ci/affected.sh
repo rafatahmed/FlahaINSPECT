@@ -23,5 +23,5 @@ route() {
 workspace=(apps/api apps/worker packages openapi package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc .nvmrc tsconfig.base.json turbo.json)
 contract=(infra/compose-contract.test.mjs infra/docker-compose.yml infra/minio/init.sh infra/e2e/pilot-smoke.mjs .env.example)
 route node "${workspace[@]}" "${contract[@]}" apps/web
-route compose "${workspace[@]}" infra .env.example .dockerignore apps/web/package.json
+route compose "${workspace[@]}" infra .env.example .dockerignore apps/web
 route flutter apps/mobile
