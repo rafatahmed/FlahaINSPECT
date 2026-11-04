@@ -219,6 +219,8 @@ export const reports = pgTable(
       .references(() => users.id),
     status: reportStatus('status').notNull().default('queued'),
     title: text('title'),
+    clientRevision: integer('client_revision'),
+    requestId: uuid('request_id'),
     filtersJson: jsonb('filters_json'),
     storageKey: text('storage_key'),
     errorMessage: text('error_message'),
@@ -228,6 +230,8 @@ export const reports = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
+    uniqueIndex('reports_client_revision').on(t.projectId, t.clientRevision),
+    uniqueIndex('reports_request_id').on(t.requestId),
     uniqueIndex('reports_one_active_per_project')
       .on(t.projectId)
       .where(sql`status IN ('queued', 'processing')`),

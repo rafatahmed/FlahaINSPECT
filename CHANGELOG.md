@@ -18,6 +18,8 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ### Added
 
+- Managers can issue frozen client PDF revisions from released findings. Current project membership controls listing, viewing and download (#65).
+
 - Managers can release an observation summary and photo to assigned project clients in the web workspace (#58).
 - Local pilot runbook: [Docs/ops/local-pilot.md](Docs/ops/local-pilot.md). `make mobile-run-android` passes the Flaha TileServer `TILE_PROVIDER_URL`.
 
