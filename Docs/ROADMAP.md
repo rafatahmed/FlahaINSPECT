@@ -21,7 +21,7 @@ This file is the implementation plan you track against. Do not invent a second p
 
 **Status values:** `not-started` · `in-progress` · `blocked` · `done` · `deferred`
 
-**Current release:** **R2 / v1.0.0** (2026-08-17). R0 tag: `r0-design-freeze`. Next: R3 backlog or first internal pilot on a real site.
+**Historical release:** **R2 / v1.0.0** (2026-08-17). R0 tag: `r0-design-freeze`. For current priorities and readiness, use **Current delivery plan** below.
 
 ---
 
@@ -46,22 +46,81 @@ Login → Select project → High-accuracy GPS → Photo + Defect/Normal/Note �
 | O-8 | Offline map usable for one prepared project (licensed tiles) | R2 |
 | O-9 | Confidential: private storage, membership, no public photo URLs | R1 |
 
-Non-goals stay in the TDD Non-goals table (GNSS, AI, path, client portal, multi-photo UX, Redis, forensic originals).
+The original TDD non-goals remain historical context. Client access and issued reports are now approved and implemented as recorded below; GNSS, AI, path tracking, multi-photo UX, Redis and forensic originals are not added by this reconciliation.
 
 ---
 
-## Current web delivery gates (4 November 2026)
+## Current delivery plan (4 November 2026)
 
-The historical R1/R2 scope below predates the client workspace and Expo field app. Use these gates for current delivery.
+**Baseline:** main `276479a`, including merged PR #76. The R0/R1/R2 sections below are historical delivery records, not the current execution queue. A historical `done` status does not certify current Expo device or deployment acceptance.
 
-| Gate | Merged or verified | Remaining acceptance |
+**Current objective:** finish and verify the inspector-to-manager-to-client web workflow, then resume Expo device acceptance. Do not resume iPhone testing until the web acceptance below is recorded.
+
+### Execute in this order
+
+| Order | Work | Status / tracking | Exit evidence |
+|---|---|---|---|
+| 1 | Reconcile this roadmap and triage accumulated issues | In progress: [#73](https://github.com/rafatahmed/FlahaINSPECT/issues/73) | Each open issue has a disposition below; candidate closures are checked against original acceptance and approved before external updates. |
+| 2 | Automate report acceptance in CI | Next: [#72](https://github.com/rafatahmed/FlahaINSPECT/issues/72) | Hosted runs execute queue/lease recovery, metadata projections and issued-revision acceptance against disposable services. Verify unchanged original PDF bytes, retries, rollback, downloads, cross-project denial and revocation. Expo-only changes still schedule no Docker/Flutter jobs. |
+| 3 | Complete web release acceptance | Pending verification; owned by this roadmap | Record concurrent-edit conflicts, archive behavior, keyboard/narrow layouts, and inspector/manager/client workflow against the approved test environment. Record the deployed revision and migration state; repository merges alone do not establish deployment. Obtain approval before deployment/database changes. |
+| 4 | Resume Expo implementation and device acceptance | Deferred until web acceptance: #63 and mobile triage below | Release state survives reopen/refresh; verify sync interruption/resume, offline recovery and actual issued PDF bytes. Record phone build and tested API revision. |
+| 5 | Resolve legacy product scope | Backlog; not an implicit release blocker | Decide whether sessions, photo numbering, hierarchical classification and linked map/thumbnail triage belong in the next release before implementing their old issues. |
+
+### What is already implemented
+
+| Capability | Merged evidence | What remains |
 |---|---|---|
-| Role workspaces | #52 and #53 implemented common login, role navigation, session redirects and private observation media. | Exercise concurrent manager edits, archive behavior, keyboard and narrow layouts. |
-| Complete results | #54 paginates the list and map. Chrome verified 123 filtered matches in database order. | Triage legacy map and classification requests #9–12 against field needs. |
-| Findings | #58 implements manager release and assigned-client viewing. Chrome verified same-session revocation for finding and photo. | #62 automates release, direct URL denial and revocation in CI with synthetic evidence. |
-| Manager reports | #60/#38 track enqueue and retry integrity. #39/#40 track browser viewing and matching dashboard/PDF open defects (open plus in_progress). | Verify View and Download against the same generated PDF and record the tested revision. |
-| Issued client reports | Approved scope is explicit manager issuance of all currently released project findings and frozen evidence/PDF bytes per revision. | Deliver private client listing and file access, new revisions for corrections and same-session membership revocation. |
-| Expo device | Expo has a dedicated bundle workflow. Web and native share the authorized API. | Resume iPhone acceptance after the web gates, including release state on reopen (#63), offline recovery and actual issued report bytes. |
+| Role workspaces, session handling and protected photos | PR #55 (#52), #56 (#53) | Target-environment acceptance and remaining usability checks above. |
+| Complete filtered observation results | PR #57 (#54); prior browser evidence includes 123 filtered matches | Legacy classification/filter requirements are separate scope, not automatically satisfied. |
+| Finding release, client access and membership revocation | PR #59 (#58), #67 (#61/#62) | Browser release/revocation gate now runs in hosted CI; retain it. |
+| Manager PDF generation, viewing, downloads and matching counts | PR #64 (#60/#38), #66 (#39/#40) | Move retained database regressions into CI under #72. Open defects means open plus in_progress. |
+| Immutable issued client revisions | PR #68 (#65) | Local acceptance covered two revisions, frozen bytes, downloads, retries, rollback and revocation; host it under #72. Production migration is not established by these tests. |
+| Exhausted lease recovery | PR #74 (#69), merge `4150ccd` | Real PostgreSQL regression passes locally; host under #72. Pre-existing stranded production records were not repaired. |
+| PDF issuance pause | PR #75 (#70), merge `7cf69ea` | Regression tests run in normal API CI. Paused issuance returns 403 before evidence reads/writes; same-ID retry works after resuming. |
+| Metadata-only report queries | PR #76 (#71), merge `276479a` | Local PostgreSQL tests exclude snapshots with 24 MiB of fixture content; host under #72. History pagination is unchanged. |
+| Expo clean-checkout build and native profile implementation | PR #48 (#47); current source includes archive inputs and native profile rows | Device acceptance and legacy issue reconciliation below; do not equate a bundle check with phone verification. |
+
+### Open issue triage
+
+Snapshot: **22 open issues**. This is a triage snapshot, not 22 confirmed unfinished implementations. Keep the current queue above as the source of priority.
+
+| Issues | Disposition | Required next action |
+|---|---|---|
+| #73 | Current documentation task | Reconcile merged evidence, queue and issue dispositions. |
+| #72 | Next engineering task | Host report queue, metadata and issued-revision suites. |
+| #63 | Confirmed Expo defect; deferred | Fix authoritative manager release state after web acceptance. |
+| #41 | Keep open: archive acceptance outstanding | [.easignore](../apps/field/.easignore) includes all four originally missing inputs. PR #48 proves clean-checkout iOS export, not export from an inspected EAS archive. Inspect the archive and export from its contents before closure. |
+| #46 | Keep open: implemented, partial device evidence | [Profile](../apps/field/profile-screen.tsx) selects [native rows](../apps/field/native-profile-rows.tsx); dependency is tracked. User reported full name/email/role read correctly at largest text size after installing build `9449d5f2-8190-419a-ade6-67bf3aba5892`. Small-device layout and all role/offline cases were not established by that report. |
+| #37 | Keep open: source fix present, pilot acceptance outstanding | [App](../apps/field/App.tsx) omits onSync in capture-only mode; [list](../apps/field/inspection-list.tsx) hides the action and explains unavailability. Verify saved record/photo retention and sync-capable mode against the current pilot. |
+| #42 | Keep open: native startup acceptance outstanding | [App](../apps/field/App.tsx) holds the splash through layout/logo loading and a timer. Fast/slow/failed restore and installed-build OS handoff still need a recorded device matrix. |
+| #43 | Keep open: compact-device/keyboard acceptance outstanding | [Login](../apps/field/login-screen.tsx) disables idle bounce and preserves keyboard scrolling/focus. Verify small/regular heights, errors, enlarged text and keyboard submission. |
+| #44 | Keep open: viewport acceptance outstanding | [Preview viewer](../apps/field/reports-preview.tsx) uses a bounded container with contain scaling and text/page controls. Record portrait/landscape checks; sample images do not prove actual issued PDF integration. |
+| #45 | Keep open: public tunnel resume acceptance outstanding | Hosted loopback TUS success is not proof of public Expo-host HEAD/offset behavior. Reproduce resume on the same upload and token through the current public route, then verify released client photo bytes. |
+| #8 | Recommend close as completed, after approval | Authentication supports JWT access, refresh rotation/reuse revocation, role guards and mobile secure storage. Fresh API tests and hosted role/browser tests support the original minimal-auth scope. See closure evidence below. |
+| #7 | Recommend close as completed, after approval | Upload finalization enqueues thumbnails; worker creates linked JPEGs, supports retry and exposes status/metrics. Hosted evidence reaches ready. See closure evidence below. |
+| #3 | Keep open: storage implementation present, full acceptance not established | Configurable S3, signed/private access, size validation and GC exist. Verify deletion synchronization and the original format-validation criteria before closing the whole issue. |
+| #2 | Legacy scope decision required | Current schema covers projects, points, photos and jobs; session/photo numbering and field/zone/type hierarchy are not established. Do not close as fully implemented. |
+| #4 | Legacy scope decision required | Inspector capture/TUS upload works. Original per-session auto-numbering and initially-unclassified workflow differ from current capture-time category selection. |
+| #5 | Legacy scope decision required | Filtered/keyset observation queries exist; session and conditional-classification query requirements remain distinct from the merged pagination fix. |
+| #6 | Legacy scope decision required | Current PATCH supports manager remarks/procedure/status; it does not establish the requested type1/type2/type3 and field/zone update contract. |
+| #9 | Legacy scope decision required | Current map does not establish all numbered bearing arrows and two-way thumbnail-strip selection criteria. |
+| #10 | Legacy scope decision required | Current dashboard/results do not establish the requested numbered vertical photo board and synchronized highlighting. |
+| #11 | Legacy scope decision required | Current editor is category/status based; original conditional type1/type2/type3 dropdown rules require a product decision. |
+| #12 | Legacy scope decision required | Current filtering and complete pagination do not establish unclassified-first, hierarchical classification, field/zone and linked-strip criteria. Future lasso selection was explicitly excluded from the original immediate scope. |
+| #1 | Keep as historical umbrella pending child reconciliation | Update its checklist only after evidence-based child closures and explicit decisions on remaining legacy scope. It is not the execution queue. |
+
+### Evidence supporting the proposed closures
+
+These are recommendations only: no issue state changes are part of this documentation PR.
+
+- **#8, authentication:** [Auth service](../apps/api/src/auth/auth.service.ts), [JWT guard](../apps/api/src/auth/jwt-auth.guard.ts), [role guard](../apps/api/src/auth/roles.guard.ts) and [Expo session/API](../apps/field/api.ts) implement the original backend/mobile authentication requirement. The current manager role supplies the original admin intent; no additional admin role is needed to call this minimal-auth work complete. Fresh API suite: 79 tests passed, including auth, token-version revocation, lockout and project access. [PR #55](https://github.com/rafatahmed/FlahaINSPECT/pull/55) and [PR #56](https://github.com/rafatahmed/FlahaINSPECT/pull/56) record role/session delivery. This closes implementation scope, not all future device or security acceptance.
+- **#7, thumbnails:** [Photo finalization](../apps/api/src/photos/photos.service.ts) queues `generate_thumbnail` and exposes protected thumbnail access; [thumbnail handler](../apps/worker/src/jobs/thumbnail.handler.ts) rotates/resizes and stores a linked JPEG; [poller](../apps/worker/src/poller/poller.service.ts) and [claimer](../apps/worker/src/jobs/claimer.ts) handle queued work/retries; [metrics](../apps/api/src/metrics/registry.ts) track job/dead-letter counts. JPEG satisfies the requested JPEG/WEBP output alternative. Fresh worker suite: 14 tests passed. The [hosted run on 29a2a2e](https://github.com/rafatahmed/FlahaINSPECT/actions/runs/41755585272) passed upload-to-PDF and browser release/revocation. Its [smoke fixture](../infra/e2e/pilot-smoke.mjs) requires photo ready before browser acceptance. This is existing hosted evidence, not a newly run failure-injection test of thumbnail processing.
+
+After approval to close #7 and #8, the 22-issue snapshot would become 20; merging this PR with `Closes #73` would leave 19, assuming no other issue changes. Do not report those reduced counts until GitHub confirms them.
+
+**Issue handling:** classify an issue as verified complete, implemented but awaiting acceptance, confirmed defect, or deferred scope. Every closure needs supporting evidence; superseding an issue must identify where any remaining criteria went. Do not close groups solely because nearby features were merged.
+
+**Workspace caution:** the original local checkout has extensive uncommitted changes and diverges from main. Audit and delivery work use clean isolated worktrees. Preserve local work; do not infer missing repository features from that checkout or reset it as cleanup.
 
 ## Release train
 

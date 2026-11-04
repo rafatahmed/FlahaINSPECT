@@ -12,6 +12,10 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ## [Unreleased]
 
+### Documentation
+
+- Reconciled the current delivery roadmap with merged web/report work, remaining acceptance gates and all 22 open issue dispositions (#73).
+
 ### Fixed
 
 - Report history, status and download authorization now fetch explicit metadata columns without loading frozen evidence snapshots (#71).
