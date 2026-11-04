@@ -50,6 +50,19 @@ Non-goals stay in the TDD Non-goals table (GNSS, AI, path, client portal, multi-
 
 ---
 
+## Current web delivery gates (4 November 2026)
+
+The historical R1/R2 scope below predates the client workspace and Expo field app. Use these gates for current delivery.
+
+| Gate | Merged or verified | Remaining acceptance |
+|---|---|---|
+| Role workspaces | #52 and #53 implemented common login, role navigation, session redirects and private observation media. | Exercise concurrent manager edits, archive behavior, keyboard and narrow layouts. |
+| Complete results | #54 paginates the list and map. Chrome verified 123 filtered matches in database order. | Triage legacy map and classification requests #9–12 against field needs. |
+| Findings | #58 implements manager release and assigned-client viewing. Chrome verified same-session revocation for finding and photo. | #62 automates release, direct URL denial and revocation in CI with synthetic evidence. |
+| Manager reports | #60/#38 track enqueue and retry integrity. #39/#40 track browser viewing and matching dashboard/PDF open defects (open plus in_progress). | Verify View and Download against the same generated PDF and record the tested revision. |
+| Issued client reports | Approved scope is explicit manager issuance of all currently released project findings and frozen evidence/PDF bytes per revision. | Deliver private client listing and file access, new revisions for corrections and same-session membership revocation. |
+| Expo device | Expo has a dedicated bundle workflow. Web and native share the authorized API. | Resume iPhone acceptance after the web gates, including release state on reopen (#63), offline recovery and actual issued report bytes. |
+
 ## Release train
 
 ```
