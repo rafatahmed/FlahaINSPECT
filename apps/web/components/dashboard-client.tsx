@@ -160,29 +160,31 @@ function ObservationResults({ projectId, category, status }: { projectId: string
       </p>
       <div className="layout-split">
         <DashboardMap points={points} />
-        <div>
-          <table>
-            <thead>
-              <tr>
-                <th>Session / observation</th>
-                <th>Time</th>
-                <th>Category</th>
-                <th>Status</th>
-                <th>Inspector</th>
-              </tr>
-            </thead>
-            <tbody>
-              {points.map((p) => (
-                <tr key={p.id} onClick={() => router.push(`/points/${p.id}`)} style={{ cursor: 'pointer' }}>
-                  <td>{p.session_client_uuid ? p.session_client_uuid + " / " + p.observation_number : "Legacy - session unknown"}</td>
-                  <td><a href={`/points/${p.id}`} onClick={(e) => e.stopPropagation()}>{formatCapturedAt(p.captured_at)}</a></td>
-                  <td>{p.category}</td>
-                  <td>{p.status}</td>
-                  <td>{p.inspector_id?.slice(0, 8) ?? '—'}</td>
+        <div className="observation-results">
+          <div className="observation-table-scroll" role="region" aria-label="Observations" tabIndex={0}>
+            <table>
+              <thead>
+                <tr>
+                  <th>Session / observation</th>
+                  <th>Time</th>
+                  <th>Category</th>
+                  <th>Status</th>
+                  <th>Inspector</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {points.map((p) => (
+                  <tr key={p.id} onClick={() => router.push(`/points/${p.id}`)} style={{ cursor: 'pointer' }}>
+                    <td>{p.session_client_uuid ? p.session_client_uuid + " / " + p.observation_number : "Legacy - session unknown"}</td>
+                    <td><a href={`/points/${p.id}`} onClick={(e) => e.stopPropagation()}>{formatCapturedAt(p.captured_at)}</a></td>
+                    <td>{p.category}</td>
+                    <td>{p.status}</td>
+                    <td>{p.inspector_id?.slice(0, 8) ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {(cursor || failed) && (
             <button disabled={loading} onClick={() => {
               setLoading(true);
