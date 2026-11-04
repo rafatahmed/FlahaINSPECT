@@ -80,7 +80,7 @@ export class IssuedReportsController {
       WHERE f.project_id=${id}::uuid ORDER BY f.released_at,f.point_id`);
     return {
       project,
-      items: result.rows.map(({ photo_key, ...finding }) => finding),
+      items: result.rows.map(({ photo_key: _photoKey, ...finding }) => finding),
     };
   }
 
