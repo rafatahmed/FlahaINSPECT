@@ -5,7 +5,7 @@ import { color } from './field-brand';
 import { ObservationPlot } from './project-map';
 import type { Category } from './observations';
 
-type Point = { id: string; category: Category; latitude: number; longitude: number; version: number; note: string | null;
+type Point = { session_client_uuid?: string | null; observation_number?: number | null; id: string; category: Category; latitude: number; longitude: number; version: number; note: string | null;
   release?: { summary: string; released_at?: string } | null; photos: { id: string; status: string }[] };
 type Released = { id: string; category: Category; latitude: number; longitude: number; summary: string };
 type Item = Point | Released;
@@ -62,6 +62,7 @@ export function FindingsScreen({ project, manager, onBack }: { project: Project;
     {busy && <Text style={s.body}>Please wait…</Text>}
     {current ? <View style={s.card}>
       <Text style={s.heading}>{current.category}</Text>
+      {manager && <Text selectable style={s.body}>{"session_client_uuid" in current && current.session_client_uuid ? "Session " + current.session_client_uuid + " / Observation " + current.observation_number : "Legacy - session unknown"}</Text>}
       <Text selectable style={s.body}>{current.latitude.toFixed(5)}°, {current.longitude.toFixed(5)}°</Text>
       {photo && <Image accessibilityLabel="Finding photo" source={photo} resizeMode="contain" style={s.photo}/>}
       {'summary' in current ? <Text selectable style={s.body}>{current.summary}</Text> : <>

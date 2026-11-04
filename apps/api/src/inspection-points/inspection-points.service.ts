@@ -10,6 +10,8 @@ import { StorageService } from '../storage/storage.service';
 import { recordSyncLag } from '../metrics/registry';
 import { allowlistDeviceInfo, fieldPayloadEqual } from './field-payload';
 
+type QueryDatabase = Pick<Db, 'select' | 'execute'>;
+
 @Injectable()
 export class InspectionPointsService {
   constructor(
@@ -18,12 +20,45 @@ export class InspectionPointsService {
   ) {}
 
   async create(actor: AuthUser, input: CreateInput) {
-    const project = await this.loadProject(input.project_id);
-    const memberships = await this.memberIds(actor.id);
+    try {
+      return await this.db.transaction(tx => this.createPoint(actor, input, tx));
+    } catch (error) {
+      const pg = error as { code?: string; cause?: { code?: string } };
+      if (pg.code === '23505' || pg.cause?.code === '23505') {
+        throw new ApiException(ErrorCode.CONFLICT_IDEMPOTENCY);
+      }
+      throw error;
+    }
+  }
+
+  private async createPoint(actor: AuthUser, input: CreateInput, db: QueryDatabase) {
+    const project = await this.loadProject(input.project_id, db);
+    const memberships = await this.memberIds(actor.id, db);
     const access = projectAccess(actor, project, memberships.has(input.project_id));
     if (access === 'not_found') throw new ApiException(ErrorCode.NOT_FOUND);
     if (access === 'forbidden') throw new ApiException(ErrorCode.FORBIDDEN);
     if (project.isArchived) throw new ApiException(ErrorCode.PROJECT_ARCHIVED);
+
+    const sessionFields = [input.session_client_uuid, input.session_device_id, input.session_started_at, input.observation_number];
+    if (sessionFields.some(v => v !== undefined)) {
+      if (sessionFields.some(v => v == null) || !Number.isInteger(input.observation_number) ||
+          input.observation_number! < 1 || input.observation_number! > 2147483647) {
+        throw new ApiException(ErrorCode.VALIDATION_ERROR, undefined, 'Session identity and number must be supplied together.');
+      }
+      await db.execute(sql`INSERT INTO inspection_sessions(id,project_id,inspector_id,device_id,started_at)
+        VALUES (${input.session_client_uuid}::uuid,${input.project_id}::uuid,${actor.id}::uuid,
+          ${input.session_device_id}::uuid,${input.session_started_at}::timestamptz)
+        ON CONFLICT(id) DO NOTHING`);
+      const session = await db.execute<{project_id:string; inspector_id:string; device_id:string; started_at:Date}>(sql`
+        SELECT project_id,inspector_id,device_id,started_at FROM inspection_sessions
+        WHERE id=${input.session_client_uuid}::uuid FOR UPDATE`);
+      const row = session.rows[0];
+      if (!row || row.project_id !== input.project_id || row.inspector_id !== actor.id ||
+          row.device_id !== input.session_device_id ||
+          new Date(row.started_at).getTime() !== new Date(input.session_started_at!).getTime()) {
+        throw new ApiException(ErrorCode.CONFLICT_IDEMPOTENCY);
+      }
+    }
 
     const capturedAt = new Date(input.captured_at);
     const note = input.note ?? null;
@@ -31,15 +66,17 @@ export class InspectionPointsService {
     const locationAdjusted = input.location_adjusted ?? false;
     const device = allowlistDeviceInfo(input.client_device_info);
 
-    const inserted = await this.db.execute<{ id: string }>(sql`
+    const inserted = await db.execute<{ id: string }>(sql`
       INSERT INTO inspection_points (
-        client_uuid, project_id, inspector_id, category, note,
+        client_uuid, project_id, inspector_id, session_id, observation_number, category, note,
         location, latitude, longitude, accuracy_m, altitude_m, heading_deg,
         location_source, location_adjusted, captured_at, client_device_info, outside_boundary
       ) VALUES (
         ${input.client_uuid}::uuid,
         ${input.project_id}::uuid,
         ${actor.id}::uuid,
+        ${input.session_client_uuid ?? null}::uuid,
+        ${input.observation_number ?? null},
         ${input.category}::point_category,
         ${note},
         ST_SetSRID(ST_MakePoint(${input.longitude}, ${input.latitude}), 4326)::geography,
@@ -68,10 +105,10 @@ export class InspectionPointsService {
     const newId = firstId(inserted);
     if (newId) {
       recordSyncLag((Date.now() - capturedAt.getTime()) / 1000);
-      return { status: 201 as const, point: await this.loadPublic(newId) };
+      return { status: 201 as const, point: await this.loadPublic(newId, db) };
     }
 
-    const existing = await this.db
+    const existing = await db
       .select()
       .from(inspectionPoints)
       .where(eq(inspectionPoints.clientUuid, input.client_uuid))
@@ -106,10 +143,11 @@ export class InspectionPointsService {
         locationSource,
       },
     );
-    if (!same) {
+    if (!same || row.sessionId !== (input.session_client_uuid ?? null) ||
+        row.observationNumber !== (input.observation_number ?? null)) {
       throw new ApiException(ErrorCode.CONFLICT_IDEMPOTENCY);
     }
-    return { status: 200 as const, point: await this.loadPublic(row.id) };
+    return { status: 200 as const, point: await this.loadPublic(row.id, db) };
   }
 
   async get(actor: AuthUser, id: string) {
@@ -265,31 +303,33 @@ export class InspectionPointsService {
     if (access === 'forbidden') throw new ApiException(ErrorCode.FORBIDDEN);
   }
 
-  private async loadProject(id: string) {
-    const rows = await this.db.select().from(projects).where(eq(projects.id, id)).limit(1);
+  private async loadProject(id: string, db: QueryDatabase = this.db) {
+    const rows = await db.select().from(projects).where(eq(projects.id, id)).limit(1);
     return rows[0] ?? null;
   }
 
-  private async memberIds(userId: string): Promise<Set<string>> {
-    const rows = await this.db
+  private async memberIds(userId: string, db: QueryDatabase = this.db): Promise<Set<string>> {
+    const rows = await db
       .select({ projectId: projectMembers.projectId })
       .from(projectMembers)
       .where(eq(projectMembers.userId, userId));
     return new Set(rows.map((r) => r.projectId));
   }
 
-  private async loadPublic(id: string) {
-    const [row] = await this.db
+  private async loadPublic(id: string, db: QueryDatabase = this.db) {
+    const [row] = await db
       .select()
       .from(inspectionPoints)
       .where(eq(inspectionPoints.id, id));
-    const photoRows = await this.db
+    const photoRows = await db
       .select()
       .from(photos)
       .where(eq(photos.inspectionPointId, id));
     return {
       id: row.id,
       client_uuid: row.clientUuid,
+      session_client_uuid: row.sessionId,
+      observation_number: row.observationNumber,
       project_id: row.projectId,
       inspector_id: row.inspectorId,
       category: row.category,
@@ -327,6 +367,10 @@ export class InspectionPointsService {
 }
 
 type CreateInput = {
+  session_client_uuid?: string;
+  session_device_id?: string;
+  session_started_at?: string;
+  observation_number?: number;
   client_uuid: string;
   project_id: string;
   category: 'defect' | 'normal' | 'note';

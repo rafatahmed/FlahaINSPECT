@@ -19,6 +19,7 @@ type Stats = {
   open_defect_count?: number;
 };
 type Point = MapPoint & {
+  session_client_uuid?: string | null; observation_number?: number | null;
   captured_at?: string;
   inspector_id?: string;
   photos?: Array<{ id: string; status: string }>;
@@ -163,6 +164,7 @@ function ObservationResults({ projectId, category, status }: { projectId: string
           <table>
             <thead>
               <tr>
+                <th>Session / observation</th>
                 <th>Time</th>
                 <th>Category</th>
                 <th>Status</th>
@@ -172,6 +174,7 @@ function ObservationResults({ projectId, category, status }: { projectId: string
             <tbody>
               {points.map((p) => (
                 <tr key={p.id} onClick={() => router.push(`/points/${p.id}`)} style={{ cursor: 'pointer' }}>
+                  <td>{p.session_client_uuid ? p.session_client_uuid + " / " + p.observation_number : "Legacy - session unknown"}</td>
                   <td><a href={`/points/${p.id}`} onClick={(e) => e.stopPropagation()}>{formatCapturedAt(p.captured_at)}</a></td>
                   <td>{p.category}</td>
                   <td>{p.status}</td>

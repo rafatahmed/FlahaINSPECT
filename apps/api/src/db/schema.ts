@@ -3,6 +3,7 @@ import {
   bigserial,
   boolean,
   char,
+  check,
   customType,
   doublePrecision,
   index,
@@ -120,6 +121,15 @@ export const projectMembers = pgTable(
   ],
 );
 
+export const inspectionSessions = pgTable('inspection_sessions', {
+  id: uuid('id').primaryKey(),
+  projectId: uuid('project_id').notNull().references(() => projects.id),
+  inspectorId: uuid('inspector_id').notNull().references(() => users.id),
+  deviceId: uuid('device_id').notNull(),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const inspectionPoints = pgTable(
   'inspection_points',
   {
@@ -131,6 +141,8 @@ export const inspectionPoints = pgTable(
     inspectorId: uuid('inspector_id')
       .notNull()
       .references(() => users.id),
+    sessionId: uuid('session_id').references(() => inspectionSessions.id),
+    observationNumber: integer('observation_number'),
     category: pointCategory('category').notNull(),
     note: text('note'),
     remarks: text('remarks'),
@@ -154,6 +166,8 @@ export const inspectionPoints = pgTable(
   },
   (t) => [
     index('inspection_points_updated_at_id_idx').on(t.updatedAt, t.id),
+    uniqueIndex('inspection_points_session_number_uq').on(t.sessionId, t.observationNumber),
+    check('inspection_points_session_number_pair', sql`(${t.sessionId} IS NULL AND ${t.observationNumber} IS NULL) OR (${t.sessionId} IS NOT NULL AND ${t.observationNumber} IS NOT NULL AND ${t.observationNumber} > 0)`),
   ],
 );
 

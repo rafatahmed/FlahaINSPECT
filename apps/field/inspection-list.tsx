@@ -4,6 +4,7 @@ import { color } from './field-brand';
 
 export type InspectionItem = {
   id: string; category: string; capturedAt: string; note: string; ready: boolean;
+  sessionId?: string; observationNumber?: number;
   photo?: ImageSourcePropType;
   syncStatus?: string;
 };
@@ -30,6 +31,7 @@ export function InspectionList({ projectName, items, sample, busy, message, onBa
       <View style={s.row}>{item.photo && <Image source={item.photo} style={s.thumb} accessibilityLabel="Inspection photo"/>}
         <View style={s.details}><Text style={s.category}>{item.category}</Text>
           <Text style={s.text}>{new Date(item.capturedAt).toLocaleString()}</Text></View></View>
+      <Text selectable style={s.text}>{item.sessionId ? "Session " + item.sessionId + " / Observation " + item.observationNumber : "Legacy - session unknown"}</Text>
       {!!item.note && <Text selectable style={s.text}>{item.note}</Text>}
       <Text selectable style={s.meta}>{item.id}</Text>
       <Text accessibilityLiveRegion="polite" style={s.text}>{item.ready ? (sample ? 'Synced in preview' : 'Photo ready on server') : item.syncStatus || 'Saved locally - pending sync'}</Text>

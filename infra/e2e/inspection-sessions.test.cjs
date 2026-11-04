@@ -1,0 +1,66 @@
+const assert = require('node:assert/strict');
+const {test,before,after} = require('node:test');
+const {randomUUID} = require('node:crypto');
+const {createDb,createPool} = require('../../apps/api/dist/db/client');
+const {InspectionPointsService} = require('../../apps/api/dist/inspection-points/inspection-points.service');
+let pool, service, inspector, manager, project;
+before(async()=>{
+ const url = new URL(process.env.DATABASE_URL);
+ assert.equal(process.env.DISPOSABLE_REPORT_TEST,'1');
+ assert.ok(['localhost','127.0.0.1'].includes(url.hostname) && url.pathname.endsWith('_disposable'));
+ pool=createPool(url.href);
+ inspector={id:randomUUID(),role:'inspector'}; manager={id:randomUUID(),role:'manager'};
+ for(const actor of [inspector,manager]) await pool.query('INSERT INTO users(id,email,password_hash,full_name,role) VALUES($1,$2,$3,$4,$5)',[actor.id,actor.id+'@example.test','unused','Synthetic',actor.role]);
+ project=(await pool.query("INSERT INTO projects(name) VALUES('Session fixture') RETURNING id")).rows[0].id;
+ await pool.query('INSERT INTO project_members(project_id,user_id) VALUES($1,$2)',[project,inspector.id]);
+ service=new InspectionPointsService(createDb(pool),{signedGet:async()=>null});
+});
+after(async()=>{await pool?.end()});
+function capture(extra={}) { return {client_uuid:randomUUID(),project_id:project,category:'defect',latitude:25,longitude:51,captured_at:'2026-11-04T09:00:00.000Z',...extra}; }
+test('numbered capture retries retain identity and manager-visible session/number',async()=>{
+ const input=capture({session_client_uuid:randomUUID(),session_device_id:randomUUID(),session_started_at:'2026-11-04T08:00:00.000Z',observation_number:1});
+ const first=await service.create(inspector,input);
+ const retry=await service.create(inspector,input);
+ assert.equal(retry.point.id,first.point.id);
+ assert.equal(first.point.session_client_uuid,input.session_client_uuid);
+ assert.equal(first.point.observation_number,1);
+ const listed=await service.list(manager,{project_id:project});
+ assert.equal(listed.items.find(p=>p.id===first.point.id).observation_number,1);
+});
+test('number, device, owner and project conflicts cannot change an accepted capture',async()=>{
+ const visit={session_client_uuid:randomUUID(),session_device_id:randomUUID(),session_started_at:'2026-11-04T08:00:00.000Z',observation_number:1};
+ const input=capture(visit);
+ const first=await service.create(inspector,input);
+ for(const changed of [
+   {...input,observation_number:2},
+   {...input,session_device_id:randomUUID()},
+   {...input,session_started_at:'2026-11-04T07:00:00.000Z'},
+   {...input,session_client_uuid:randomUUID()},
+   capture(visit),
+ ]) await assert.rejects(service.create(inspector,changed),e=>e.getStatus()===409);
+ await assert.rejects(service.create(manager,capture(visit)),e=>e.getStatus()===409);
+ const project2=(await pool.query("INSERT INTO projects(name) VALUES('Other project') RETURNING id")).rows[0].id;
+ await pool.query('INSERT INTO project_members(project_id,user_id) VALUES($1,$2)',[project2,inspector.id]);
+ await assert.rejects(service.create(inspector,{...input,project_id:project2}),e=>e.getStatus()===409);
+ const unchanged=await service.get(manager,first.point.id);
+ assert.equal(unchanged.point.observation_number,1);
+});
+test('concurrent number collision has one winner and retries remain idempotent',async()=>{
+ const visit={session_client_uuid:randomUUID(),session_device_id:randomUUID(),session_started_at:'2026-11-04T08:00:00.000Z',observation_number:1};
+ const outcomes=await Promise.allSettled([service.create(inspector,capture(visit)),service.create(inspector,capture(visit))]);
+ assert.equal(outcomes.filter(r=>r.status==='fulfilled').length,1);
+ assert.equal(outcomes.find(r=>r.status==='rejected').reason.getStatus(),409);
+});
+test('legacy captures still sync, partial session payloads fail, revoked access retains server state',async()=>{
+ const old=await service.create(inspector,capture());
+ assert.equal(old.point.session_client_uuid,null);
+ assert.equal(old.point.observation_number,null);
+ await assert.rejects(service.create(inspector,capture({observation_number:1})),e=>e.getStatus()===400);
+ const visit={session_client_uuid:randomUUID(),session_device_id:randomUUID(),session_started_at:'2026-11-04T08:00:00.000Z',observation_number:1};
+ await pool.query('DELETE FROM project_members WHERE project_id=$1 AND user_id=$2',[project,inspector.id]);
+ await assert.rejects(service.create(inspector,capture(visit)),e=>e.getStatus()===403);
+ await pool.query('INSERT INTO project_members(project_id,user_id) VALUES($1,$2)',[project,inspector.id]);
+ await pool.query('UPDATE projects SET is_archived=true WHERE id=$1',[project]);
+ await assert.rejects(service.create(inspector,capture(visit)));
+ await pool.query('UPDATE projects SET is_archived=false WHERE id=$1',[project]);
+});

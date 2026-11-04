@@ -7,6 +7,7 @@ import { formatCapturedAt } from '@/lib/datetime';
 
 type Photo = { id: string; status: string };
 type Point = {
+  session_client_uuid?: string | null; observation_number?: number | null;
   id: string;
   category: string;
   captured_at: string;
@@ -110,6 +111,7 @@ export function PointEditor({ point, canEdit }: { point: Point; canEdit: boolean
         </p>
       </section>
       <section>
+        <p>{point.session_client_uuid ? "Session " + point.session_client_uuid + " / Observation " + point.observation_number : "Legacy - session unknown"}</p>
         <p>
           <strong>{categoryLabel(point.category)}</strong>
         </p>
