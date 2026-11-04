@@ -16,7 +16,7 @@ type Project = { id: string; name: string; is_archived?: boolean };
 type Stats = {
   point_count?: number;
   photos_ready?: number;
-  by_category?: Record<string, number>;
+  open_defect_count?: number;
 };
 type Point = MapPoint & {
   captured_at?: string;
@@ -82,7 +82,7 @@ export function DashboardClient({
         </div>
         <div className="card">
           <span>Open defects</span>
-          <strong>{stats.by_category?.defect ?? 0}</strong>
+          <strong>{stats.open_defect_count ?? 0}</strong>
         </div>
         <div className="card">
           <span>Pending photos</span>

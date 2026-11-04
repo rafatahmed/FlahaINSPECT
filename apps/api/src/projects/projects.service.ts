@@ -147,7 +147,11 @@ export class ProjectsService {
   async stats(actor: AuthUser, id: string) {
     await this.requireProject(actor, id);
     const [pointRow] = await this.db
-      .select({ n: count() })
+      .select({
+        n: count(),
+        openDefects: sql<number>`count(*) filter (where ${inspectionPoints.category} = 'defect'
+          and ${inspectionPoints.status} in ('open', 'in_progress'))::int`,
+      })
       .from(inspectionPoints)
       .where(and(eq(inspectionPoints.projectId, id), isNull(inspectionPoints.deletedAt)));
     const categories = await this.db
@@ -172,6 +176,7 @@ export class ProjectsService {
       .where(and(eq(photos.projectId, id), eq(photos.status, 'ready')));
     return {
       point_count: Number(pointRow?.n ?? 0),
+      open_defect_count: Number(pointRow?.openDefects ?? 0),
       photos_ready: Number(photoRow?.n ?? 0),
       by_category: Object.fromEntries(categories.map((r) => [r.category, Number(r.n)])),
       by_status: Object.fromEntries(statuses.map((r) => [r.status, Number(r.n)])),

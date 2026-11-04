@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, Res, StreamableFile, ParseUUIDPipe, UseGuards } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -29,6 +29,12 @@ export class ReportsController {
   @Get('projects/:projectId/reports')
   list(@CurrentUser() actor: AuthUser, @Param('projectId') projectId: string) {
     return this.reports.list(actor, projectId);
+  }
+
+  @Get('reports/:id/file')
+  async file(@CurrentUser() actor: AuthUser, @Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
+    const file = await this.reports.file(actor, id, req.ip ?? 'unknown');
+    return new StreamableFile(file.body, { type: 'application/pdf', length: file.contentLength });
   }
 
   @Get('reports/:id')

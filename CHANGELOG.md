@@ -12,6 +12,8 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ## [Unreleased]
 
+- Managers can view generated PDFs in the browser or download them. Dashboard and PDF open-defect totals include open and in-progress defects (#39, #40).
+
 ### Added
 
 - Managers can release an observation summary and photo to assigned project clients in the web workspace (#58).
