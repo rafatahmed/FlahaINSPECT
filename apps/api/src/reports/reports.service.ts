@@ -99,7 +99,7 @@ export class ReportsService {
     return { items: rows.map((r) => this.publicReport(r, null)) };
   }
 
-  async get(actor: AuthUser, id: string, ip: string) {
+  private async authorizedReport(actor: AuthUser, id: string) {
     if (!canGenerateReport(actor.role)) {
       throw new ApiException(ErrorCode.FORBIDDEN);
     }
@@ -109,13 +109,29 @@ export class ReportsService {
     const access = projectAccess(actor, project, await this.isMember(actor.id, row.projectId));
     if (access === 'not_found') throw new ApiException(ErrorCode.NOT_FOUND);
     if (access === 'forbidden') throw new ApiException(ErrorCode.FORBIDDEN);
+    return row;
+  }
+
+  private async recordDownload(actor: AuthUser, id: string, ip: string) {
+    await this.db.execute(sql`
+      INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, ip)
+      VALUES (${actor.id}::uuid, 'report.download', 'report', ${id}::uuid, ${ip})
+    `);
+  }
+
+  async file(actor: AuthUser, id: string, ip: string) {
+    const row = await this.authorizedReport(actor, id);
+    if (row.status !== 'ready') throw new ApiException(ErrorCode.NOT_FOUND);
+    const file = await this.storage.getObject(row.storageKey);
+    if (!file) throw new ApiException(ErrorCode.DEPENDENCY_UNAVAILABLE);
+    await this.recordDownload(actor, id, ip);
+    return file;
+  }
+
+  async get(actor: AuthUser, id: string, ip: string) {
+    const row = await this.authorizedReport(actor, id);
     const download = row.status === 'ready' ? await this.storage.signedReportGet(row.storageKey) : null;
-    if (download) {
-      await this.db.execute(sql`
-        INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, ip)
-        VALUES (${actor.id}::uuid, 'report.download', 'report', ${row.id}::uuid, ${ip})
-      `);
-    }
+    if (download) await this.recordDownload(actor, id, ip);
     return { report: this.publicReport(row, download) };
   }
 

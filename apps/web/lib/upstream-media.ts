@@ -9,14 +9,18 @@ export async function photoResponse(path: string) {
   return streamApiImage(path);
 }
 
-export async function streamApiImage(path: string) {
-  const headers = { 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' };
+export async function fetchApiMedia(path: string) {
   const token = (await cookies()).get(ACCESS_COOKIE)?.value;
   // Only the configured API receives the credential. Never follow a media redirect.
-  const res = await fetch(API_BASE + API_PREFIX + path, {
+  return fetch(API_BASE + API_PREFIX + path, {
     headers: token ? { Authorization: 'Bearer ' + token } : {},
     redirect: 'manual', cache: 'no-store',
   });
+}
+
+export async function streamApiImage(path: string) {
+  const headers = { 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' };
+  const res = await fetchApiMedia(path);
   if (!res.ok || !res.body) {
     void res.body?.cancel().catch(() => undefined);
     return new Response(null, { status: res.status >= 400 ? res.status : 502, headers });
