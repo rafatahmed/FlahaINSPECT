@@ -43,29 +43,27 @@ export async function claimJob(pool: Pool, workerId: string): Promise<ClaimedJob
 
 /** KD-32 / KD-39: 15m lease. Dead job must fail the coupled report. */
 export async function reclaimExpiredLeases(pool: Pool): Promise<number> {
-  const dead = await pool.query<{ report_id: string | null }>(
-    `
-    UPDATE jobs
-    SET status = 'dead',
-        last_error = COALESCE(last_error, 'lease expired'),
-        locked_at = NULL,
-        locked_by = NULL,
-        updated_at = now()
-    WHERE status = 'running'
-      AND locked_at < now() - interval '15 minutes'
-      AND attempts >= max_attempts
-    RETURNING payload->>'report_id' AS report_id
-    `,
+  const dead = await pool.query<{ count: number }>(
+    `WITH dead AS (
+       UPDATE jobs
+       SET status = 'dead',
+           last_error = COALESCE(last_error, 'lease expired'),
+           locked_at = NULL,
+           locked_by = NULL,
+           updated_at = now()
+       WHERE status = 'running'
+         AND locked_at < now() - interval '15 minutes'
+         AND attempts >= max_attempts
+       RETURNING type, payload
+     ), failed_reports AS (
+       UPDATE reports SET status = 'failed', error_message = 'lease expired', updated_at = now()
+       FROM dead
+       WHERE dead.type = 'generate_report'
+         AND reports.id = (dead.payload->>'report_id')::uuid
+         AND reports.status IN ('queued', 'processing')
+     )
+     SELECT count(*)::int AS count FROM dead`,
   );
-  for (const row of dead.rows) {
-    if (row.report_id) {
-      await pool.query(
-        `UPDATE reports SET status = 'failed', error_message = 'lease expired', updated_at = now()
-         WHERE id = $1 AND status IN ('queued', 'processing')`,
-        [row.report_id],
-      );
-    }
-  }
 
   const pending = await pool.query(
     `
@@ -79,7 +77,7 @@ export async function reclaimExpiredLeases(pool: Pool): Promise<number> {
       AND attempts < max_attempts
     `,
   );
-  return (dead.rowCount ?? 0) + (pending.rowCount ?? 0);
+  return (dead.rows[0]?.count ?? 0) + (pending.rowCount ?? 0);
 }
 
 export async function finishJob(pool: Pool, id: string, ok: boolean, error?: string): Promise<void> {
