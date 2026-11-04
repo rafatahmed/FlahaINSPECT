@@ -98,9 +98,9 @@ async function syncEvidence(row: Row, onProgress?: (status: string) => void) {
 // Preserve local failure information across relaunch; server reports it as last known state.
 db.execSync('CREATE TABLE IF NOT EXISTS observation_failure(id TEXT PRIMARY KEY,message TEXT NOT NULL);');
 export const localSessions = (owner: string, projectId: string) => db.getAllSync<import('./session-store').InspectionSession>(
-  'SELECT s.*,l.ended_at,l.manifest,l.sequence FROM inspection_session s LEFT JOIN session_lifecycle l ON l.id=s.id WHERE s.owner=? AND s.project_id=? ORDER BY s.rowid DESC',owner,projectId);
+  'SELECT s.*,l.ended_at,l.manifest,l.sequence,c.closed_at AS capture_closed_at FROM inspection_session s LEFT JOIN session_lifecycle l ON l.id=s.id LEFT JOIN session_capture_closed c ON c.id=s.id WHERE s.owner=? AND s.project_id=? ORDER BY s.rowid DESC',owner,projectId);
 export async function reconcileSession(owner: string, id: string) {
- const visit=db.getFirstSync<import('./session-store').InspectionSession>('SELECT s.*,l.ended_at,l.manifest,l.sequence FROM inspection_session s LEFT JOIN session_lifecycle l ON l.id=s.id WHERE s.owner=? AND s.id=?',owner,id);
+ const visit=db.getFirstSync<import('./session-store').InspectionSession>('SELECT s.*,l.ended_at,l.manifest,l.sequence,c.closed_at AS capture_closed_at FROM inspection_session s LEFT JOIN session_lifecycle l ON l.id=s.id LEFT JOIN session_capture_closed c ON c.id=s.id WHERE s.owner=? AND s.id=?',owner,id);
  if(!visit) throw new Error('Inspection session not found on this phone.');
  await api('/inspection-sessions',{client_uuid:id,project_id:visit.project_id,device_id:visit.device_id,started_at:visit.started_at});
  if(visit.ended_at) await api('/inspection-sessions/'+id+'/end',{device_id:visit.device_id,ended_at:visit.ended_at,allocated_count:visit.next_number-1,observations:JSON.parse(visit.manifest!)});

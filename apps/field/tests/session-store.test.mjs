@@ -81,3 +81,14 @@ test('new visits stop allocating before the final inventory can exceed its limit
  assert.equal(sql.prepare('SELECT count(*) AS n FROM observation').get().n,1);
  sql.close();
 });
+test('an oversized upgraded visit can close capture and start another without losing pending evidence',()=>{
+ const {sql,db,store}=fixture();store.start('a','project','old','phone','2026-11-04T09:00:00.000Z');
+ store.save('a','old',{client_uuid:'saved',project_id:'project'},'saved-photo','hash');
+ sql.exec('UPDATE inspection_session SET next_number=10002');
+ const closed=store.end('a','old','2026-11-04T10:00:00.000Z');
+ assert.ok(closed.capture_closed_at);assert.equal(closed.ended_at,null);
+ assert.equal(createSessionStore(db).current('a','project'),null);
+ assert.equal(store.start('a','project','replacement','phone','2026-11-04T11:00:00.000Z').id,'replacement');
+ assert.throws(()=>store.save('a','old',{client_uuid:'new',project_id:'project'},'new-photo','hash'),/ended/);
+ assert.equal(sql.prepare('SELECT photo FROM observation WHERE id=?').get('saved').photo,'saved-photo');sql.close();
+});

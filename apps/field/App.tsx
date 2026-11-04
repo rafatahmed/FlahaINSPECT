@@ -203,11 +203,17 @@ export default function App() {
         })}/> :
       project && <InspectionList projectName={project.name} busy={busy} message={message}
           activeSession={sessions.current(owner,project.id)?.id}
-          sessionSummary={localSessions(owner,project.id).map(visit=>'Session '+visit.id+' — '+(visit.ended_at?'Ended; check sync to confirm completion':'Active; sync completeness not confirmed')).join('\n')}
+          sessionSummary={localSessions(owner,project.id).map(visit=>'Session '+visit.id+' — '+(visit.capture_closed_at?'Capture closed locally; oversized legacy inventory needs server support. Evidence can sync; completeness unknown':visit.ended_at?'Ended; check sync to confirm completion':'Active; sync completeness not confirmed')).join('\n')}
           onEndSession={() => Alert.alert('End this inspection session?', 'Saved evidence can still sync. Further captures will start a new visit.',[
             {text:'Cancel',style:'cancel'}, {text:'End session',onPress:()=>run(async()=>{
               const visit=sessions.current(owner,project.id);
-              if(visit) sessions.end(owner,visit.id,new Date().toISOString());
+              if(visit) {
+                const ended=sessions.end(owner,visit.id,new Date().toISOString());
+                if(ended.capture_closed_at) {
+                  setMessage('Capture closed locally. Start a new visit for further photos. Existing evidence can still sync; the oversized inventory needs server support and completeness remains unknown.');
+                  return;
+                }
+              }
               setMessage('Session ended on this phone. Saved evidence is retained; check sync when connected.');
             })}])}
           onReconcile={captureOnlyPilot?undefined:()=>run(async()=>{
