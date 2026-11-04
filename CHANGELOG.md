@@ -17,7 +17,8 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 - Let web and Expo managers close active visits with an immutable actor, time and reason, without claiming missing evidence was received.
 - Require the original phone to acknowledge the closure and freeze its durable allocation inventory before recovering uploads; keep capture closed and preserve existing observation/photo identities.
 - Reject stale reconciliation, wrong phones, unlisted captures and current archived/revoked access. Replacement phones start new visits; legacy evidence is unchanged.
-- Add migration 0006 and real PostgreSQL, SQLite and browser regressions. An offline phone learns closure on its next successful contact; physical-iPhone recovery remains a separate acceptance step.
+- Recover oversized legacy inventories through durable 1,000-entry chunks, preserving request limits, interrupted retries and saved evidence after administrative closure.
+- Add migrations 0006/0007 and real PostgreSQL, SQLite and browser regressions. An offline phone learns closure on its next successful contact; physical-iPhone recovery remains a separate acceptance step.
 
 ### Inspection session lifecycle (#85)
 

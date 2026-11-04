@@ -139,6 +139,15 @@ export const inspectionSessions = pgTable('inspection_sessions', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const sessionInventoryParts = pgTable('session_inventory_parts', {
+ sessionId: uuid('session_id').notNull().references(() => inspectionSessions.id),
+ offsetIndex: integer('offset_index').notNull(),
+ endedAt: timestamp('ended_at', {withTimezone:true}).notNull(),
+ allocatedCount: integer('allocated_count').notNull(),
+ inventorySize: integer('inventory_size').notNull(),
+ observations: jsonb('observations').notNull(),
+}, t => [primaryKey({columns:[t.sessionId,t.offsetIndex]})]);
+
 export const inspectionPoints = pgTable(
   'inspection_points',
   {

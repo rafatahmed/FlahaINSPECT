@@ -104,3 +104,22 @@ test('recovered-phone closure freezes the durable inventory and retains closure 
  assert.equal(reopened.start('a','project','new-visit','phone','2026-11-04T11:00:00.000Z').id,'new-visit');
  assert.equal(sql.prepare('SELECT photo FROM observation WHERE id=?').get('saved').photo,'saved-photo');sql.close();
 });
+
+
+test('administratively closed legacy visit freezes more than 10000 allocations across restart',()=>{
+ const {sql,db,store}=fixture();store.start('a','project','old','phone','2026-11-04T09:00:00.000Z');
+ store.save('a','old',{client_uuid:'saved',project_id:'project'},'saved-photo','hash');
+ sql.exec("WITH RECURSIVE n(x) AS (SELECT 2 UNION ALL SELECT x+1 FROM n WHERE x<10001) INSERT INTO session_allocation SELECT 'old',x,'old-'||x,'photo-'||x FROM n; UPDATE inspection_session SET next_number=10002");
+ const closure={id:'closure',actor_id:'manager',closed_at:'2026-11-04T10:00:00.000Z',reason:'Lost'};
+ const recovered=store.recover('a','old',closure);
+ assert.ok(recovered.ended_at);
+ assert.equal(JSON.parse(recovered.manifest).length,10001);
+ assert.equal(JSON.parse(recovered.manifest)[0].disposition,'saved');
+ assert.equal(JSON.parse(recovered.manifest)[10000].observation_number,10001);
+ const reopened=createSessionStore(db);
+ assert.equal(reopened.recover('a','old',closure).manifest,recovered.manifest);
+ assert.equal(reopened.current('a','project'),null);
+ assert.throws(()=>reopened.save('a','old',{client_uuid:'new',project_id:'project'},'new','hash'),/ended/);
+ assert.equal(sql.prepare('SELECT photo FROM observation WHERE id=?').get('saved').photo,'saved-photo');
+ sql.close();
+});

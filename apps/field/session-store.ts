@@ -22,6 +22,7 @@ export type InspectionSession = {
   manifest?: string | null;
   admin_closure?: string | null;
   sequence?: number;
+  server_inventory_received?: boolean;
 };
 type Capture = {
   client_uuid: string;
@@ -77,7 +78,7 @@ export function createSessionStore(db: SessionDatabase) {
         session.admin_closure = original?.closure ?? JSON.stringify(closure);
       }
       if (!session.ended_at) {
-        if (session.next_number > 10001) {
+        if (session.next_number > 10001 && !closure) {
           // Upgrade escape hatch: stop capture without inventing a server inventory.
           // Existing evidence can keep syncing as active; server completeness stays unknown.
           db.runSync(

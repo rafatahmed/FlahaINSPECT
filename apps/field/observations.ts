@@ -103,13 +103,21 @@ export async function refreshSessionClosure(owner: string, id: string) {
  const visit=db.getFirstSync<import('./session-store').InspectionSession>('SELECT s.*,l.ended_at,l.manifest,l.sequence,c.closed_at AS capture_closed_at,a.closure AS admin_closure FROM inspection_session s LEFT JOIN session_lifecycle l ON l.id=s.id LEFT JOIN session_capture_closed c ON c.id=s.id LEFT JOIN session_admin_closure a ON a.id=s.id WHERE s.owner=? AND s.id=?',owner,id);
  if(!visit) throw new Error('Inspection session not found on this phone.');
  const registered=await api('/inspection-sessions',{client_uuid:id,project_id:visit.project_id,device_id:visit.device_id,started_at:visit.started_at});
- if(registered.session.closure) return sessions.recover(owner,id,registered.session.closure);
- return visit;
+ const local=registered.session.closure?sessions.recover(owner,id,registered.session.closure):visit;
+ return {...local,server_inventory_received:!!registered.session.ended_at};
 }
 export async function reconcileSession(owner:string,id:string) {
  const visit=await refreshSessionClosure(owner,id);
  const closureId=visit.admin_closure?JSON.parse(visit.admin_closure).id:undefined;
- if(visit.ended_at) await api('/inspection-sessions/'+id+'/end',{device_id:visit.device_id,closure_id:closureId,ended_at:visit.ended_at,allocated_count:visit.next_number-1,observations:JSON.parse(visit.manifest!)});
+ if(visit.ended_at && !visit.server_inventory_received) {
+  const observations=JSON.parse(visit.manifest!);
+  const header={device_id:visit.device_id,closure_id:closureId,ended_at:visit.ended_at,allocated_count:visit.next_number-1};
+  if(observations.length>10000) {
+   for(let offset=0;offset<observations.length;offset+=1000) {
+    await api('/inspection-sessions/'+id+'/end-parts',{...header,inventory_size:observations.length,offset,observations:observations.slice(offset,offset+1000)});
+   }
+  } else await api('/inspection-sessions/'+id+'/end',{...header,observations});
+ }
  const rows=list(owner).filter(row=>JSON.parse(row.point).session_client_uuid===id);
  const pending=rows.filter(row=>!row.ready).length;
  const failed=rows.filter(row=>!row.ready && db.getFirstSync('SELECT 1 FROM observation_failure WHERE id=?',row.id)).length;
