@@ -13,6 +13,8 @@ import type { AuthUser } from '../auth/auth.types';
 import { InspectionSessionsService } from './inspection-sessions.service';
 import {
   EndSessionDto,
+  EndSessionPartDto,
+  CloseSessionDto,
   RegisterSessionDto,
   SessionSyncDto,
 } from './inspection-sessions.dto';
@@ -26,12 +28,27 @@ export class InspectionSessionsController {
   ) {
     return this.sessions.register(actor, body);
   }
+  @Post('inspection-sessions/:id/close')
+  close(
+    @CurrentUser() actor: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: CloseSessionDto,
+  ) {
+    return this.sessions.close(actor, id, body);
+  }
   @Post('inspection-sessions/:id/end') end(
     @CurrentUser() actor: AuthUser,
     @Param('id', ParseUUIDPipe) id: string,
     @Body() body: EndSessionDto,
   ) {
     return this.sessions.end(actor, id, body);
+  }
+  @Post('inspection-sessions/:id/end-parts') endPart(
+    @CurrentUser() actor: AuthUser,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: EndSessionPartDto,
+  ) {
+    return this.sessions.endPart(actor, id, body);
   }
   @Post('inspection-sessions/:id/sync-state') sync(
     @CurrentUser() actor: AuthUser,

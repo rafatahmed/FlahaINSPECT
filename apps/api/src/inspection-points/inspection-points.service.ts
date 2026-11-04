@@ -49,8 +49,8 @@ export class InspectionPointsService {
         VALUES (${input.session_client_uuid}::uuid,${input.project_id}::uuid,${actor.id}::uuid,
           ${input.session_device_id}::uuid,${input.session_started_at}::timestamptz)
         ON CONFLICT(id) DO NOTHING`);
-      const session = await db.execute<{project_id:string; inspector_id:string; device_id:string; started_at:Date; ended_at:Date|null; manifest:Array<{client_uuid:string;observation_number:number;disposition:string}>|null}>(sql`
-        SELECT project_id,inspector_id,device_id,started_at,ended_at,manifest FROM inspection_sessions
+      const session = await db.execute<{project_id:string; inspector_id:string; device_id:string; started_at:Date; ended_at:Date|null; closure:unknown; manifest:Array<{client_uuid:string;observation_number:number;disposition:string}>|null}>(sql`
+        SELECT project_id,inspector_id,device_id,started_at,ended_at,manifest,closure FROM inspection_sessions
         WHERE id=${input.session_client_uuid}::uuid FOR UPDATE`);
       const row = session.rows[0];
       if (!row || row.project_id !== input.project_id || row.inspector_id !== actor.id ||
@@ -58,6 +58,7 @@ export class InspectionPointsService {
           new Date(row.started_at).getTime() !== new Date(input.session_started_at!).getTime()) {
         throw new ApiException(ErrorCode.CONFLICT_IDEMPOTENCY);
       }
+      if(row.closure && !row.ended_at) throw new ApiException(ErrorCode.CONFLICT_IDEMPOTENCY,undefined,'Closed visit requires original-phone inventory reconciliation.');
       if(row.ended_at && !row.manifest?.some(e=>e.client_uuid===input.client_uuid && e.observation_number===input.observation_number && e.disposition==='saved')) {
         throw new ApiException(ErrorCode.CONFLICT_IDEMPOTENCY,undefined,'This session has ended; only inventoried saved evidence can sync.');
       }

@@ -1,15 +1,28 @@
 'use client';
+import { CloseSession } from './close-session';
 import { useEffect, useState } from 'react';
 type Session = {
   id: string;
   ended_at: string | null;
+  closure?: {
+    id: string;
+    actor_id: string;
+    closed_at: string;
+    reason: string;
+  } | null;
   last_contact_at: string | null;
   known_pending: number | null;
   known_failed: number | null;
   sync_state: string;
   removed_count: number;
 };
-export function SessionStatus({ projectId }: { projectId: string }) {
+export function SessionStatus({
+  projectId,
+  canClose = false,
+}: {
+  projectId: string;
+  canClose?: boolean;
+}) {
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState<Session[]>([]),
     [error, setError] = useState(''),
@@ -62,8 +75,26 @@ export function SessionStatus({ projectId }: { projectId: string }) {
           style={{ overflowWrap: 'anywhere' }}
         >
           <h3>Session {visit.id}</h3>
+          {visit.closure && (
+            <p>
+              Closure reason: {visit.closure.reason}. Closed by{' '}
+              {visit.closure.actor_id} at {visit.closure.closed_at}. Closure
+              history is retained after recovery.
+            </p>
+          )}
+          {canClose && !visit.ended_at && !visit.closure && (
+            <CloseSession
+              id={visit.id}
+              onClosed={() => setRefresh((value) => value + 1)}
+            />
+          )}
           <p>
-            {visit.ended_at ? 'Ended' : 'Active'} — {visit.sync_state}
+            {visit.closure
+              ? 'Administratively closed'
+              : visit.ended_at
+                ? 'Ended'
+                : 'Active'}{' '}
+            — {visit.sync_state}
           </p>
           <p>
             Last contact:{' '}

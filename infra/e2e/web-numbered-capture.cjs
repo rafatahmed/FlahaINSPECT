@@ -104,6 +104,51 @@ async function main() {
   assert.equal((await request('/photos',{...photoPayload,session_device_id:randomUUID()},token)).status,409);
   assert.equal((await request('/photos',photoPayload,token)).status,201);
   console.log('PASS: actual HTTP rejects another inspector and phone at late-photo registration');
+  // Manager browser closes a visit whose evidence still exists only on the phone.
+  const lostId=randomUUID(), lostDevice=randomUUID(), recoveredPhoto=randomUUID();
+  const savedPoint={...point,client_uuid:randomUUID(),session_client_uuid:lostId,session_device_id:lostDevice,observation_number:10001};
+  assert.equal((await request('/inspection-sessions',{client_uuid:lostId,project_id:project.id,device_id:lostDevice,started_at:point.session_started_at},token)).status,201);
+  await page.goto(web+'/dashboard?project='+project.id);
+  const lostCard=page.getByRole('heading',{name:'Session '+lostId,exact:true}).locator('..');
+  await lostCard.getByLabel('Closure reason').fill('Phone lost during site visit');
+  page.once('dialog',dialog=>dialog.accept());
+  await lostCard.getByRole('button',{name:'Close lost-phone session',exact:true}).click();
+  await lostCard.getByText(/Administratively closed.*unknown/).waitFor();
+  await page.reload();
+  await lostCard.getByText(/Closure reason: Phone lost during site visit/).waitFor();
+  const returned=await request('/inspection-sessions',{client_uuid:lostId,project_id:project.id,device_id:lostDevice,started_at:point.session_started_at},token);
+  const closure=returned.json.session.closure;
+  assert.equal(closure.actor_id,managerLogin.json.user.id);
+  assert.equal((await request('/inspection-points',savedPoint,token)).status,409);
+  assert.equal((await request('/inspection-sessions/'+lostId+'/close',{request_id:randomUUID(),reason:'Unauthorized'},token)).status,403);
+  const recoveredEnd={device_id:lostDevice,closure_id:closure.id,ended_at:new Date().toISOString(),allocated_count:10001,
+   observations:[...Array.from({length:10000},(_,i)=>({client_uuid:randomUUID(),observation_number:i+1,photo_client_uuid:randomUUID(),disposition:'deleted'})),
+    {client_uuid:savedPoint.client_uuid,observation_number:10001,photo_client_uuid:recoveredPhoto,disposition:'saved'}]};
+  // Full oversized requests remain bounded; only chunks may carry the legacy inventory.
+  assert.equal((await request('/inspection-sessions/'+lostId+'/end',recoveredEnd,token)).status,400);
+  const chunk=(offset)=>({...recoveredEnd,inventory_size:10001,offset,observations:recoveredEnd.observations.slice(offset,offset+1000)});
+  assert.equal((await request('/inspection-sessions/'+lostId+'/end-parts',{...chunk(0),device_id:randomUUID()},token)).status,409);
+  assert.equal((await request('/inspection-sessions/'+lostId+'/end-parts',{...chunk(0),observations:recoveredEnd.observations.slice(0,1001)},token)).status,400);
+  assert.equal((await request('/inspection-sessions/'+lostId+'/end-parts',chunk(0),token)).status,201);
+  await page.reload();await lostCard.getByText(/Administratively closed.*unknown/).waitFor();
+  assert.equal((await request('/inspection-points',savedPoint,token)).status,409);
+  assert.equal((await request('/inspection-sessions/'+lostId+'/end-parts',chunk(0),token)).status,201);
+  for(let offset=1000;offset<10001;offset+=1000) assert.equal((await request('/inspection-sessions/'+lostId+'/end-parts',chunk(offset),token)).status,201);
+  const recoveredPoint=await request('/inspection-points',savedPoint,token);assert.equal(recoveredPoint.status,201);
+  assert.equal((await request('/inspection-points',{...savedPoint,client_uuid:randomUUID(),observation_number:2},token)).status,409);
+  const uploaded=await request('/photos',{client_uuid:recoveredPhoto,inspection_point_client_uuid:savedPoint.client_uuid,project_id:project.id,session_device_id:lostDevice,sha256:'f'.repeat(64),byte_size:1},token);
+  assert.equal(uploaded.status,201);
+  // Materialize photo readiness in the disposable DB, as in the report fixture.
+  // This is server reconciliation acceptance, not a physical-phone/TUS transfer claim.
+  const {Client}=require('node:module').createRequire(require('node:path').resolve('apps/api/package.json'))('pg');
+  const dbUrl=new URL(env.DATABASE_URL);assert.ok(['localhost','127.0.0.1'].includes(dbUrl.hostname)&&dbUrl.pathname.endsWith('_disposable'));
+  const db=new Client({connectionString:env.DATABASE_URL});await db.connect();
+  try{await db.query("UPDATE photos SET status='ready' WHERE id=$1",[uploaded.json.photo.id]);}finally{await db.end();}
+  const reconciled=await request('/inspection-sessions/'+lostId+'/sync-state',{device_id:lostDevice,closure_id:closure.id,sequence:1,pending:0,failed:0,complete:true},token);
+  assert.equal(reconciled.status,201);assert.deepEqual(reconciled.json.session.closure,closure);
+  await page.reload();await lostCard.getByText(/Administratively closed.*complete/).waitFor();
+  await lostCard.getByText(/Closure reason: Phone lost during site visit/).waitFor();
+  console.log('PASS: manager browser closure, interrupted 10,001-allocation inventory recovery and retained closure history after completion');
   const largeId=randomUUID(), largeDevice=randomUUID();
   assert.equal((await request('/inspection-sessions',{client_uuid:largeId,project_id:project.id,device_id:largeDevice,started_at:point.session_started_at},token)).status,201);
   const largeEnd={device_id:largeDevice,ended_at:new Date().toISOString(),allocated_count:10000,

@@ -6,6 +6,8 @@ import { ApiException } from '../common/api-exception';
 import { ErrorCode } from '../common/errors';
 import type {
   EndSessionDto,
+  EndSessionPartDto,
+  CloseSessionDto,
   RegisterSessionDto,
   SessionSyncDto,
   InventoryEntry,
@@ -25,6 +27,12 @@ type Visit = {
   known_failed: number | null;
   complete_requested: boolean;
   last_contact_at: Date | null;
+  closure: {
+    id: string;
+    actor_id: string;
+    closed_at: string;
+    reason: string;
+  } | null;
 };
 const conflict = () => new ApiException(ErrorCode.CONFLICT_IDEMPOTENCY);
 @Injectable()
@@ -78,71 +86,174 @@ export class InspectionSessionsService {
       return { session: await this.read(db, visit.id) };
     });
   }
+  async close(actor: AuthUser, id: string, input: CloseSessionDto) {
+    if (actor.role !== 'manager') throw new ApiException(ErrorCode.FORBIDDEN);
+    const reason = input.reason.trim();
+    if (!reason || reason.length > 1000)
+      throw new ApiException(ErrorCode.VALIDATION_ERROR);
+    return this.db.transaction(async (db) => {
+      const { rows } = await db.execute<Visit>(
+        sql`SELECT * FROM inspection_sessions WHERE id=${id}::uuid FOR UPDATE`,
+      );
+      const visit = rows[0];
+      if (!visit) throw new ApiException(ErrorCode.NOT_FOUND);
+      await this.access(db, actor, visit.project_id, true);
+      if (visit.closure) {
+        if (
+          visit.closure.id !== input.request_id ||
+          visit.closure.actor_id !== actor.id ||
+          visit.closure.reason !== reason
+        )
+          throw conflict();
+      } else {
+        if (visit.ended_at) throw conflict();
+        await db.execute(
+          sql`UPDATE inspection_sessions SET closure=jsonb_build_object('id',${input.request_id}::text,'actor_id',${actor.id}::text,'closed_at',now(),'reason',${reason}::text),complete_requested=false WHERE id=${id}::uuid`,
+        );
+      }
+      return { session: await this.read(db, id) };
+    });
+  }
+  private acknowledgeClosure(visit: Visit, closureId?: string) {
+    if (visit.closure && visit.closure.id !== closureId) {
+      throw new ApiException(
+        ErrorCode.CONFLICT_IDEMPOTENCY,
+        undefined,
+        'This visit was administratively closed. Reconcile its saved inventory from the original phone.',
+      );
+    }
+    if (!visit.closure && closureId) throw conflict();
+  }
   async end(actor: AuthUser, id: string, input: EndSessionDto) {
     return this.db.transaction(async (db) => {
       const visit = await this.owned(db, actor, id, input.device_id);
-      const manifest = [...input.observations].sort(
-        (a, b) => a.observation_number - b.observation_number,
+      this.acknowledgeClosure(visit, input.closure_id);
+      const parts = await db.execute(
+        sql`SELECT 1 FROM session_inventory_parts WHERE session_id=${id}::uuid LIMIT 1`,
       );
+      if (parts.rows.length) throw conflict();
+      return this.freezeInventory(db, visit, input);
+    });
+  }
+  async endPart(actor: AuthUser, id: string, input: EndSessionPartDto) {
+    return this.db.transaction(async (db) => {
+      const visit = await this.owned(db, actor, id, input.device_id);
+      this.acknowledgeClosure(visit, input.closure_id);
       if (
-        manifest.some((e) => e.observation_number > input.allocated_count) ||
-        new Set(manifest.map((e) => e.observation_number)).size !==
-          manifest.length ||
-        new Set(manifest.map((e) => e.client_uuid)).size !== manifest.length ||
-        new Set(manifest.map((e) => e.photo_client_uuid)).size !==
-          manifest.length ||
-        new Date(input.ended_at) < new Date(visit.started_at)
+        new Date(input.ended_at) < new Date(visit.started_at) ||
+        !visit.closure ||
+        input.inventory_size <= 10000 ||
+        input.inventory_size > input.allocated_count ||
+        input.offset % 1000 !== 0 ||
+        input.offset >= input.inventory_size ||
+        input.observations.length !==
+          Math.min(1000, input.inventory_size - input.offset)
       )
         throw conflict();
-      if (visit.ended_at) {
-        if (
-          new Date(visit.ended_at).getTime() !==
-            new Date(input.ended_at).getTime() ||
-          visit.allocated_count !== input.allocated_count ||
+      const existing = await db.execute<{
+        ended_at: Date;
+        allocated_count: number;
+        inventory_size: number;
+      }>(
+        sql`SELECT ended_at,allocated_count,inventory_size FROM session_inventory_parts WHERE session_id=${id}::uuid LIMIT 1`,
+      );
+      const header = existing.rows[0];
+      if (
+        header &&
+        (new Date(header.ended_at).getTime() !==
+          new Date(input.ended_at).getTime() ||
+          header.allocated_count !== input.allocated_count ||
+          header.inventory_size !== input.inventory_size)
+      )
+        throw conflict();
+      if (!header && visit.ended_at) throw conflict();
+      await db.execute(
+        sql`INSERT INTO session_inventory_parts(session_id,offset_index,ended_at,allocated_count,inventory_size,observations) VALUES(${id}::uuid,${input.offset},${input.ended_at}::timestamptz,${input.allocated_count},${input.inventory_size},${JSON.stringify(input.observations)}::jsonb) ON CONFLICT DO NOTHING`,
+      );
+      const matched = await db.execute(
+        sql`SELECT 1 FROM session_inventory_parts WHERE session_id=${id}::uuid AND offset_index=${input.offset} AND observations=${JSON.stringify(input.observations)}::jsonb`,
+      );
+      if (!matched.rows.length) throw conflict();
+      if (!visit.ended_at) {
+        const count = await db.execute<{ n: number }>(
+          sql`SELECT count(*)::int AS n FROM session_inventory_parts WHERE session_id=${id}::uuid`,
+        );
+        if (count.rows[0].n === Math.ceil(input.inventory_size / 1000)) {
+          const parts = await db.execute<{ observations: InventoryEntry[] }>(
+            sql`SELECT observations FROM session_inventory_parts WHERE session_id=${id}::uuid ORDER BY offset_index`,
+          );
+          return this.freezeInventory(db, visit, {
+            ...input,
+            observations: parts.rows.flatMap((part) => part.observations),
+          });
+        }
+      }
+      return { session: await this.read(db, id) };
+    });
+  }
+  private async freezeInventory(db: Query, visit: Visit, input: EndSessionDto) {
+    const id = visit.id;
+    const manifest = [...input.observations].sort(
+      (a, b) => a.observation_number - b.observation_number,
+    );
+    if (
+      manifest.some((e) => e.observation_number > input.allocated_count) ||
+      new Set(manifest.map((e) => e.observation_number)).size !==
+        manifest.length ||
+      new Set(manifest.map((e) => e.client_uuid)).size !== manifest.length ||
+      new Set(manifest.map((e) => e.photo_client_uuid)).size !==
+        manifest.length ||
+      new Date(input.ended_at) < new Date(visit.started_at)
+    )
+      throw conflict();
+    if (visit.ended_at) {
+      if (
+        new Date(visit.ended_at).getTime() !==
+          new Date(input.ended_at).getTime() ||
+        visit.allocated_count !== input.allocated_count ||
+        JSON.stringify(
+          visit.manifest?.map((e) => [
+            e.client_uuid,
+            e.observation_number,
+            e.photo_client_uuid,
+            e.disposition,
+          ]),
+        ) !==
           JSON.stringify(
-            visit.manifest?.map((e) => [
+            manifest.map((e) => [
               e.client_uuid,
               e.observation_number,
               e.photo_client_uuid,
               e.disposition,
             ]),
-          ) !==
-            JSON.stringify(
-              manifest.map((e) => [
-                e.client_uuid,
-                e.observation_number,
-                e.photo_client_uuid,
-                e.disposition,
-              ]),
-            )
+          )
+      )
+        throw conflict();
+    } else {
+      const existing = await db.execute<{
+        client_uuid: string;
+        observation_number: number;
+        photo_uuid: string | null;
+      }>(
+        sql`SELECT p.client_uuid,p.observation_number,h.client_uuid AS photo_uuid FROM inspection_points p LEFT JOIN photos h ON h.inspection_point_id=p.id WHERE p.session_id=${id}::uuid`,
+      );
+      for (const row of existing.rows) {
+        const entry = manifest.find(
+          (e) =>
+            e.client_uuid === row.client_uuid &&
+            e.observation_number === row.observation_number,
+        );
+        if (
+          !entry ||
+          (row.photo_uuid && entry.photo_client_uuid !== row.photo_uuid)
         )
           throw conflict();
-      } else {
-        const existing = await db.execute<{
-          client_uuid: string;
-          observation_number: number;
-          photo_uuid: string | null;
-        }>(
-          sql`SELECT p.client_uuid,p.observation_number,h.client_uuid AS photo_uuid FROM inspection_points p LEFT JOIN photos h ON h.inspection_point_id=p.id WHERE p.session_id=${id}::uuid`,
-        );
-        for (const row of existing.rows) {
-          const entry = manifest.find(
-            (e) =>
-              e.client_uuid === row.client_uuid &&
-              e.observation_number === row.observation_number,
-          );
-          if (
-            !entry ||
-            (row.photo_uuid && entry.photo_client_uuid !== row.photo_uuid)
-          )
-            throw conflict();
-        }
-        await db.execute(
-          sql`UPDATE inspection_sessions SET ended_at=${input.ended_at}::timestamptz,manifest=${JSON.stringify(manifest)}::jsonb,allocated_count=${input.allocated_count},last_contact_at=now(),complete_requested=false WHERE id=${id}::uuid`,
-        );
       }
-      return { session: await this.read(db, id) };
-    });
+      await db.execute(
+        sql`UPDATE inspection_sessions SET ended_at=${input.ended_at}::timestamptz,manifest=${JSON.stringify(manifest)}::jsonb,allocated_count=${input.allocated_count},last_contact_at=now(),complete_requested=false WHERE id=${id}::uuid`,
+      );
+    }
+    return { session: await this.read(db, id) };
   }
   private async ready(db: Query, visit: Visit) {
     if (
@@ -174,6 +285,8 @@ export class InspectionSessionsService {
   async syncState(actor: AuthUser, id: string, input: SessionSyncDto) {
     return this.db.transaction(async (db) => {
       const visit = await this.owned(db, actor, id, input.device_id);
+      this.acknowledgeClosure(visit, input.closure_id);
+      if (visit.closure && !visit.ended_at) throw conflict();
       if (
         input.failed > input.pending ||
         input.sequence < visit.sequence ||
@@ -210,6 +323,7 @@ export class InspectionSessionsService {
       inspector_id: visit.inspector_id,
       started_at: visit.started_at,
       ended_at: visit.ended_at,
+      closure: visit.closure,
       last_contact_at: visit.last_contact_at,
       known_pending: visit.known_pending,
       known_failed: visit.known_failed,
@@ -218,7 +332,7 @@ export class InspectionSessionsService {
         visit.manifest?.filter((e) => e.disposition === 'deleted').length ?? 0,
       sync_state: complete
         ? 'complete'
-        : visit.known_pending === null
+        : (visit.closure && !visit.ended_at) || visit.known_pending === null
           ? 'unknown'
           : 'pending',
     };

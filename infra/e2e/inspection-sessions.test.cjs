@@ -149,3 +149,92 @@ test('only the owning inspector and phone can register ended-session photos',asy
  assert.equal((await photoService.register(inspector,payload,'127.0.0.1')).status,201);
  await assert.rejects(photoService.register(other,payload,'127.0.0.1'),e=>e.getStatus()===403);
 });
+test('manager closure preserves unknown completeness until original-phone recovery',async()=>{
+ const {InspectionSessionsService}=require('../../apps/api/dist/inspection-sessions/inspection-sessions.service');const sessions=new InspectionSessionsService(createDb(pool));
+ const id=randomUUID(),device=randomUUID(),photo=randomUUID(),started='2026-11-04T08:00:00.000Z';
+ const point=capture({session_client_uuid:id,session_device_id:device,session_started_at:started,observation_number:1});
+ await sessions.register(inspector,{client_uuid:id,project_id:project,device_id:device,started_at:started});
+ await sessions.syncState(inspector,id,{device_id:device,sequence:1,pending:1,failed:0,complete:false});
+ const close={request_id:randomUUID(),reason:'Capture phone reported lost'};
+ const closed=(await sessions.close(manager,id,close)).session;
+ assert.equal(closed.sync_state,'unknown');assert.equal(closed.closure.reason,close.reason);assert.equal(closed.closure.actor_id,manager.id);
+ assert.deepEqual((await sessions.close(manager,id,close)).session.closure,closed.closure);
+ await assert.rejects(service.create(inspector,point),e=>e.getStatus()===409);
+ const end={device_id:device,ended_at:'2026-11-04T10:00:00.000Z',allocated_count:1,observations:[{client_uuid:point.client_uuid,observation_number:1,photo_client_uuid:photo,disposition:'saved'}]};
+ await assert.rejects(sessions.end(inspector,id,end),e=>e.getStatus()===409);
+ await assert.rejects(sessions.end(inspector,id,{...end,device_id:randomUUID(),closure_id:close.request_id}),e=>e.getStatus()===409);
+ await sessions.end(inspector,id,{...end,closure_id:close.request_id});
+ const accepted=(await service.create(inspector,point)).point;
+ await assert.rejects(service.create(inspector,{...point,client_uuid:randomUUID(),observation_number:2}),e=>e.getStatus()===409);
+ await pool.query("INSERT INTO photos(client_uuid,inspection_point_id,project_id,sha256,byte_size,content_type,status) VALUES($1,$2,$3,$4,1,'image/jpeg','ready')",[photo,accepted.id,project,'e'.repeat(64)]);
+ await assert.rejects(sessions.syncState(inspector,id,{device_id:device,sequence:2,pending:0,failed:0,complete:true}),e=>e.getStatus()===409);
+ const done=(await sessions.syncState(inspector,id,{device_id:device,closure_id:close.request_id,sequence:2,pending:0,failed:0,complete:true})).session;
+ assert.equal(done.sync_state,'complete');assert.deepEqual(done.closure,closed.closure);
+});
+test('closure is manager-only, immutable, and does not bypass archived or revoked access',async()=>{
+ const {InspectionSessionsService}=require('../../apps/api/dist/inspection-sessions/inspection-sessions.service');const sessions=new InspectionSessionsService(createDb(pool));
+ const id=randomUUID(),device=randomUUID(),started='2026-11-04T08:00:00.000Z';
+ await sessions.register(inspector,{client_uuid:id,project_id:project,device_id:device,started_at:started});
+ const close={request_id:randomUUID(),reason:'Lost original phone'};
+ await assert.rejects(sessions.close(inspector,id,close),e=>e.getStatus()===403);
+ await assert.rejects(sessions.close(manager,id,{...close,reason:'   '}),e=>e.getStatus()===400);
+ await sessions.close(manager,id,close);
+ await assert.rejects(sessions.close(manager,id,{...close,reason:'Changed history'}),e=>e.getStatus()===409);
+ await assert.rejects(pool.query('UPDATE inspection_sessions SET closure=NULL WHERE id=$1',[id]),e=>e.code==='23514');
+ const end={device_id:device,closure_id:close.request_id,ended_at:'2026-11-04T10:00:00.000Z',allocated_count:0,observations:[]};
+ await pool.query('UPDATE projects SET is_archived=true WHERE id=$1',[project]);
+ await assert.rejects(sessions.end(inspector,id,end),e=>e.code==='PROJECT_ARCHIVED');
+ await pool.query('UPDATE projects SET is_archived=false WHERE id=$1',[project]);
+ await pool.query('DELETE FROM project_members WHERE project_id=$1 AND user_id=$2',[project,inspector.id]);
+ await assert.rejects(sessions.end(inspector,id,end),e=>e.getStatus()===404);
+ await pool.query('INSERT INTO project_members(project_id,user_id) VALUES($1,$2)',[project,inspector.id]);
+ await sessions.end(inspector,id,end);
+ await sessions.syncState(inspector,id,{device_id:device,closure_id:close.request_id,sequence:2,pending:0,failed:0,complete:true});
+ await assert.rejects(sessions.syncState(inspector,id,{device_id:device,closure_id:close.request_id,sequence:1,pending:0,failed:0,complete:false}),e=>e.getStatus()===409);
+});
+test('manager closure racing owner ending cannot erase or invent history',async()=>{
+ const {InspectionSessionsService}=require('../../apps/api/dist/inspection-sessions/inspection-sessions.service');const sessions=new InspectionSessionsService(createDb(pool));
+ const id=randomUUID(),device=randomUUID();await sessions.register(inspector,{client_uuid:id,project_id:project,device_id:device,started_at:'2026-11-04T08:00:00.000Z'});
+ const results=await Promise.allSettled([
+  sessions.close(manager,id,{request_id:randomUUID(),reason:'Lost phone'}),
+  sessions.end(inspector,id,{device_id:device,ended_at:'2026-11-04T10:00:00.000Z',allocated_count:0,observations:[]})
+ ]);
+ assert.equal(results.filter(result=>result.status==='fulfilled').length,1);
+ assert.equal(results.find(result=>result.status==='rejected').reason.getStatus(),409);
+});
+
+
+test('oversized closed legacy visit resumes inventory chunks then recovers saved evidence',async()=>{
+ const {InspectionSessionsService}=require('../../apps/api/dist/inspection-sessions/inspection-sessions.service');
+ const sessions=new InspectionSessionsService(createDb(pool));
+ const id=randomUUID(),device=randomUUID(),started='2026-11-04T08:00:00.000Z';
+ await sessions.register(inspector,{client_uuid:id,project_id:project,device_id:device,started_at:started});
+ const closure=(await sessions.close(manager,id,{request_id:randomUUID(),reason:'Lost legacy phone'})).session.closure;
+ const entries=Array.from({length:10001},(_,i)=>({client_uuid:randomUUID(),photo_client_uuid:randomUUID(),observation_number:i+1,disposition:i===10000?'saved':'deleted'}));
+ const header={device_id:device,closure_id:closure.id,ended_at:'2026-11-04T10:00:00.000Z',allocated_count:10001,inventory_size:10001};
+ const first={...header,offset:0,observations:entries.slice(0,1000)};
+ await sessions.endPart(inspector,id,first);
+ const restarted=new InspectionSessionsService(createDb(pool));
+ await restarted.endPart(inspector,id,first);
+ await assert.rejects(restarted.endPart(inspector,id,{...first,observations:[{...entries[0],photo_client_uuid:randomUUID()},...entries.slice(1,1000)]}),e=>e.getStatus()===409);
+ await assert.rejects(restarted.endPart(inspector,id,{...first,device_id:randomUUID()}),e=>e.getStatus()===409);
+ await assert.rejects(restarted.endPart(inspector,id,{...first,closure_id:randomUUID()}),e=>e.getStatus()===409);
+ const saved=entries[10000],point=capture({client_uuid:saved.client_uuid,session_client_uuid:id,session_device_id:device,session_started_at:started,observation_number:10001});
+ await assert.rejects(service.create(inspector,point),e=>e.getStatus()===409);
+ await assert.rejects(restarted.end(inspector,id,{...header,observations:[]}),e=>e.getStatus()===409);
+ assert.equal((await restarted.list(manager,project)).items.find(s=>s.id===id).sync_state,'unknown');
+ await pool.query('DELETE FROM project_members WHERE project_id=$1 AND user_id=$2',[project,inspector.id]);
+ await assert.rejects(restarted.endPart(inspector,id,first),e=>e.getStatus()===404);
+ await pool.query('INSERT INTO project_members(project_id,user_id) VALUES($1,$2)',[project,inspector.id]);
+ await pool.query('UPDATE projects SET is_archived=true WHERE id=$1',[project]);
+ await assert.rejects(restarted.endPart(inspector,id,first),e=>e.code==='PROJECT_ARCHIVED');
+ await pool.query('UPDATE projects SET is_archived=false WHERE id=$1',[project]);
+ for(let offset=1000;offset<10001;offset+=1000) await restarted.endPart(inspector,id,{...header,offset,observations:entries.slice(offset,offset+1000)});
+ await restarted.endPart(inspector,id,first);
+ const created=await service.create(inspector,point);
+ assert.equal((await service.create(inspector,point)).point.id,created.point.id);
+ await assert.rejects(service.create(inspector,{...point,client_uuid:randomUUID(),observation_number:10002}),e=>e.getStatus()===409);
+ await pool.query("INSERT INTO photos(client_uuid,inspection_point_id,project_id,sha256,byte_size,content_type,status) VALUES($1,$2,$3,$4,1,'image/jpeg','ready')",[saved.photo_client_uuid,created.point.id,project,'e'.repeat(64)]);
+ const completed=await restarted.syncState(inspector,id,{device_id:device,closure_id:closure.id,sequence:1,pending:0,failed:0,complete:true});
+ assert.equal(completed.session.sync_state,'complete');assert.deepEqual(completed.session.closure,closure);
+});
