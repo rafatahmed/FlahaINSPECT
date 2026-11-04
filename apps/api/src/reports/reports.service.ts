@@ -49,25 +49,29 @@ export class ReportsService {
     }
 
     try {
-      const [report] = await this.db
-        .insert(reports)
-        .values({
-          projectId,
-          requestedBy: actor.id,
-          status: 'queued',
-          title: title ?? null,
-          pointCount: count,
-        })
-        .returning();
-      await this.db.insert(jobs).values({
-        type: 'generate_report',
-        status: 'pending',
-        payload: { report_id: report.id },
+      const report = await this.db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(reports)
+          .values({
+            projectId,
+            requestedBy: actor.id,
+            status: 'queued',
+            title: title ?? null,
+            pointCount: count,
+          })
+          .returning();
+        await tx.insert(jobs).values({
+          type: 'generate_report',
+          status: 'pending',
+          payload: { report_id: created.id },
+        });
+        return created;
       });
       return { status: 202 as const, report: this.publicReport(report, null) };
     } catch (err) {
-      const code = (err as { code?: string }).code;
-      if (code === '23505') {
+      const failure = err as { code?: string; constraint?: string; cause?: { code?: string; constraint?: string } };
+      const pgError = failure.cause ?? failure;
+      if (pgError.code === '23505' && pgError.constraint === 'reports_one_active_per_project') {
         const again = await this.db
           .select({ id: reports.id })
           .from(reports)
@@ -95,7 +99,7 @@ export class ReportsService {
     return { items: rows.map((r) => this.publicReport(r, null)) };
   }
 
-  async get(actor: AuthUser, id: string, ip: string) {
+  private async authorizedReport(actor: AuthUser, id: string) {
     if (!canGenerateReport(actor.role)) {
       throw new ApiException(ErrorCode.FORBIDDEN);
     }
@@ -105,13 +109,29 @@ export class ReportsService {
     const access = projectAccess(actor, project, await this.isMember(actor.id, row.projectId));
     if (access === 'not_found') throw new ApiException(ErrorCode.NOT_FOUND);
     if (access === 'forbidden') throw new ApiException(ErrorCode.FORBIDDEN);
+    return row;
+  }
+
+  private async recordDownload(actor: AuthUser, id: string, ip: string) {
+    await this.db.execute(sql`
+      INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, ip)
+      VALUES (${actor.id}::uuid, 'report.download', 'report', ${id}::uuid, ${ip})
+    `);
+  }
+
+  async file(actor: AuthUser, id: string, ip: string) {
+    const row = await this.authorizedReport(actor, id);
+    if (row.status !== 'ready') throw new ApiException(ErrorCode.NOT_FOUND);
+    const file = await this.storage.getObject(row.storageKey);
+    if (!file) throw new ApiException(ErrorCode.DEPENDENCY_UNAVAILABLE);
+    await this.recordDownload(actor, id, ip);
+    return file;
+  }
+
+  async get(actor: AuthUser, id: string, ip: string) {
+    const row = await this.authorizedReport(actor, id);
     const download = row.status === 'ready' ? await this.storage.signedReportGet(row.storageKey) : null;
-    if (download) {
-      await this.db.execute(sql`
-        INSERT INTO audit_logs (actor_id, action, entity_type, entity_id, ip)
-        VALUES (${actor.id}::uuid, 'report.download', 'report', ${row.id}::uuid, ${ip})
-      `);
-    }
+    if (download) await this.recordDownload(actor, id, ip);
     return { report: this.publicReport(row, download) };
   }
 

@@ -89,26 +89,23 @@ export async function finishJob(pool: Pool, id: string, ok: boolean, error?: str
     ]);
     return;
   }
-  const updated = await pool.query<{ status: string; report_id: string | null }>(
-    `
-    UPDATE jobs
-    SET status = CASE WHEN attempts >= max_attempts THEN 'dead' ELSE 'pending' END,
-        run_after = now() + interval '30 seconds',
-        last_error = $2,
-        locked_at = NULL,
-        locked_by = NULL,
-        updated_at = now()
-    WHERE id = $1
-    RETURNING status, payload->>'report_id' AS report_id
-    `,
+  await pool.query(
+    `WITH updated AS (
+       UPDATE jobs
+       SET status = (CASE WHEN attempts >= max_attempts THEN 'dead' ELSE 'pending' END)::job_status,
+           run_after = now() + interval '30 seconds',
+           last_error = $2,
+           locked_at = NULL,
+           locked_by = NULL,
+           updated_at = now()
+       WHERE id = $1
+       RETURNING status, type, payload
+     )
+     UPDATE reports SET status = 'failed', error_message = $2, updated_at = now()
+     FROM updated
+     WHERE updated.status = 'dead' AND updated.type = 'generate_report'
+       AND reports.id = (updated.payload->>'report_id')::uuid
+       AND reports.status IN ('queued', 'processing')`,
     [id, error ?? 'failed'],
   );
-  const row = updated.rows[0];
-  if (row?.status === 'dead' && row.report_id) {
-    await pool.query(
-      `UPDATE reports SET status = 'failed', error_message = $2, updated_at = now()
-       WHERE id = $1 AND status IN ('queued', 'processing')`,
-      [row.report_id, error ?? 'failed'],
-    );
-  }
 }

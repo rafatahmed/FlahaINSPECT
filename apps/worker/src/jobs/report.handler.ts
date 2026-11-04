@@ -62,7 +62,7 @@ export async function handleReport(
   for (const p of points.rows) {
     if (p.category === 'defect') {
       defect += 1;
-      if (p.status === 'open') openDefects += 1;
+      if (p.status === 'open' || p.status === 'in_progress') openDefects += 1;
     } else if (p.category === 'normal') normal += 1;
     else if (p.category === 'note') note += 1;
     rows.push({
