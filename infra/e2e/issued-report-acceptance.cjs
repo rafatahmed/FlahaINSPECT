@@ -116,7 +116,14 @@ async function run() {
       secretAccessKey: process.env.S3_SECRET_KEY,
     },
   });
-  await storage.send(new s3.CreateBucketCommand({ Bucket: 'ci-private' }));
+  // CI initializes the private bucket; standalone disposable runs may not.
+  // Only a missing bucket permits creation: authentication/configuration failures remain fatal.
+  try {
+    await storage.send(new s3.HeadBucketCommand({ Bucket: 'ci-private' }));
+  } catch (error) {
+    if (error.$metadata?.httpStatusCode !== 404) throw error;
+    await storage.send(new s3.CreateBucketCommand({ Bucket: 'ci-private' }));
+  }
   await storage.send(
     new s3.PutObjectCommand({
       Bucket: 'ci-private',
