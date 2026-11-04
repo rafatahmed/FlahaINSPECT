@@ -646,6 +646,101 @@ paths:
           description: Status
         '404':
           $ref: '#/components/responses/NotFound'
+  /projects/{id}/issuance-draft:
+    get:
+      operationId: getIssuanceDraft
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      summary: Manager review of currently released findings
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Approved finding summaries
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /projects/{id}/issued-reports:
+    post:
+      operationId: issueClientReport
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      summary: Issue an immutable client PDF revision (manager)
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      description: Issues 1 to 200 released findings, with at most 50 MB of total evidence. Summaries override approved text for this revision only. Reuse request_id for retries.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [request_id, summaries]
+              properties:
+                request_id: { type: string, format: uuid }
+                summaries:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [id, summary]
+                    properties:
+                      id: { type: string, format: uuid }
+                      summary: { type: string, minLength: 1, maxLength: 4000 }
+      responses:
+        '202':
+          description: Queued or repeated request for the same revision
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /client/projects/{id}/reports:
+    get:
+      operationId: listClientReports
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      summary: List ready issued revisions for a current project member
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Items containing id, revision, generated_at and point_count
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /client/reports/{id}:
+    get:
+      operationId: getClientReport
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      summary: Read an issued revision for a current project member
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Report metadata
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /client/reports/{id}/file:
+    get:
+      operationId: streamClientReport
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      summary: Stream immutable issued PDF for a current project member
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Private PDF bytes
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     bearerAuth:

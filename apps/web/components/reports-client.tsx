@@ -113,6 +113,7 @@ export function ReportsClient({
 
   return (
     <>
+      <p><a href={`/reports/issue/${projectId}`}>Issue client report</a></p>
       <div className="header">
         <label>
           Project{' '}

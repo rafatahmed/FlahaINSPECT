@@ -15,7 +15,7 @@ export default async function ProjectFindings({ params }: { params: Promise<{ id
   const { items } = json as { items: { id: string; summary: string }[] };
   return <Shell account={account}>
     <Link href="/client">Your projects</Link>
-    <h1>Released findings</h1>
+    <h1>Released findings</h1><Link href={`/client/projects/${id}/reports`}>Issued reports</Link>
     {items.length ? <ul>{items.map(finding =>
       <li key={finding.id}><Link href={`/client/findings/${finding.id}`}>{finding.summary}</Link></li>
     )}</ul> : <p>No findings released yet.</p>}

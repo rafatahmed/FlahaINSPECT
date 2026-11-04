@@ -1,4 +1,5 @@
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { renderIssuedReport } from './issued-report.handler';
 import { Pool } from 'pg';
 import { buildReportHtml, type ReportPointRow } from './html';
 import { renderPdf } from './pdf-renderer';
@@ -11,6 +12,11 @@ export async function handleReport(
   bucket: string,
   reportId: string,
 ): Promise<void> {
+  const issued=await pool.query('SELECT * FROM reports WHERE id=$1 AND client_revision IS NOT NULL',[reportId]);
+  if (issued.rows[0]) {
+    await renderIssuedReport(pool,s3,bucket,issued.rows[0]);
+    return;
+  }
   const header = await pool.query<{
     id: string;
     project_id: string;
