@@ -45,7 +45,7 @@ function PinEditor({ draft, onConfirm, onCancel }: { draft: Draft; onConfirm: (p
 }
 
 type Props = {
-  sample?: boolean;
+  sample?: boolean; sessionLabel?: string;
   projectName: string; draft: Draft | null; category: Category | null; note: string; freeMB: number;
   busy: boolean; message: string; onBack: () => void; onPhoto: () => void; onPin: (p?: Pin) => void;
   onCategory: (c: Category) => void; onNote: (text: string) => void; onSave: () => void;
@@ -58,6 +58,7 @@ export function CaptureScreen(p: Props) {
     <Action title="‹  Project map" disabled={p.busy} onPress={p.onBack}/>
     <Text style={s.eyebrow}>{p.sample ? 'SAMPLE DATA  /  ' : ''}{p.projectName}</Text>
     <Text accessibilityRole="header" style={s.title}>Capture observation</Text>
+    {!!p.sessionLabel && <Text selectable style={s.copy}>Session {p.sessionLabel}</Text>}
     {adjusting && p.draft ? <PinEditor draft={p.draft} onCancel={() => setAdjusting(false)}
       onConfirm={pin => {p.onPin(pin); setAdjusting(false);}}/> : <>
       {p.draft ? <Image source={{ uri: p.draft.uri }} accessibilityLabel="Inspection photo preview" resizeMode="contain" style={s.photo}/>

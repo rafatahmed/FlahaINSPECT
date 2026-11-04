@@ -12,6 +12,14 @@ How to update: see [Docs/ROADMAP.md](Docs/ROADMAP.md#changelog-and-versioning).
 
 ## [Unreleased]
 
+### Numbered capture (spec #83, ticket 1)
+
+- Start a local inspection session in Expo and allocate permanent observation numbers atomically with saved evidence. Preserve legacy queues and resumable upload identities.
+- Validate session owner/project/device and number conflicts at sync; show session/number in manager results and details.
+- Keep the dashboard within narrow viewports with a keyboard-focusable observation table scroll region; isolate the numbered browser fixture from archived issuance projects.
+- Add SQLite, real PostgreSQL and browser acceptance checks. Session ending/completeness remains a separate slice; physical iPhone acceptance is still required.
+
+
 ### Acceptance work
 
 - Add isolated hosted queue, metadata and issued-revision regression coverage, preserving Expo-only job isolation (#72).

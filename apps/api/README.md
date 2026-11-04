@@ -36,3 +36,25 @@ OpenAPI: `openapi/flaha-inspect-v1.yaml`.
 corepack pnpm --filter @flaha/inspect-api dev
 # http://127.0.0.1:3001/health
 ```
+
+## Numbered inspection capture
+
+New Expo observations add four fields to the existing observation-create payload:
+session_client_uuid, session_device_id, session_started_at and observation_number.
+Supply all four together; observation_number is a positive 32-bit integer.
+The first accepted observation registers the session atomically. The authenticated
+actor owns it; project/device/start time are immutable. Same capture retries keep
+identity and number; conflicting session/number reuse returns 409.
+
+The server returns session_client_uuid and observation_number in observation
+detail, list and delta-sync results. Legacy payloads remain supported with null
+session/number; no visits or numbers are invented for historical records.
+Apply migration 0004 before enabling this capture UI. Older APIs reject the new
+fields or fail the client's numbering acknowledgement check; local evidence stays
+queued. Session end and sync-completeness workflows are not part of this slice.
+
+Disposable PostgreSQL regression: node --test infra/e2e/inspection-sessions.test.cjs
+after migrating the isolated database twice with DISPOSABLE_REPORT_TEST=1.
+Browser acceptance: node infra/e2e/web-numbered-capture.cjs with disposable seeded
+accounts, API_BASE_URL, WEB_URL, SEED_PASSWORD, DISPOSABLE_FINDINGS_TEST=1 and
+PW_RUNTIME/CHROME_PATH as needed. Do not use a shared or production database.

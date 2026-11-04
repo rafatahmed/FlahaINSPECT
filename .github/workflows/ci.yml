@@ -209,6 +209,12 @@ jobs:
               node --test "infra/e2e/report-${suite}.test.cjs"
             )
           done
+      - name: Numbered inspection session database regression
+        run: |
+          docker compose --env-file .env exec -T postgres createdb -U flaha sessions_disposable
+          export DATABASE_URL="postgres://flaha:flaha_dev_only@127.0.0.1:5433/sessions_disposable"
+          node apps/api/dist/db/migrate.js --twice
+          node --test infra/e2e/inspection-sessions.test.cjs
       - name: Seed fresh issuance database
         run: |
           node apps/api/dist/db/migrate.js --twice
@@ -222,6 +228,7 @@ jobs:
           web_pid=$!
           trap 'kill "$web_pid" 2>/dev/null || true' EXIT
           node infra/e2e/issued-report-acceptance.cjs
+          node infra/e2e/web-numbered-capture.cjs
       - name: Failure diagnostics
         if: failure()
         run: |

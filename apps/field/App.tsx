@@ -7,7 +7,8 @@ import { Paths } from 'expo-file-system';
 import { randomUUID } from 'expo-crypto';
 import * as SplashScreen from 'expo-splash-screen';
 import { ApiError, api, login, logout, origin, restore, type Project, type Session } from './api';
-import { db, list, photoFile, save, sync, type Category } from './observations';
+import { db, list, photoFile, save, sync, sessions, startInspectionSession, type Category } from './observations';
+import { SessionStartScreen } from './session-start-screen';
 import { LoginScreen } from './login-screen';
 import { InspectionList } from './inspection-list';
 import { AssignedProjects } from './assigned-projects';
@@ -49,7 +50,7 @@ export default function App() {
     const timer = setTimeout(() => setSplashShown(true), splashDurationMs);
     return () => clearTimeout(timer);
   }, [splashLaidOut, logoLoaded]);
-  const [page, setPage] = useState<'projects' | 'map' | 'capture' | 'work' | 'findings'>('projects');
+  const [page, setPage] = useState<'projects' | 'map' | 'capture' | 'work' | 'findings' | 'session-start'>('projects');
   const [project, setProject] = useState<Project | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [category, setCategory] = useState<Category | null>(null);
@@ -180,9 +181,14 @@ export default function App() {
       {page === 'findings' && project && session.user.role !== 'inspector' ? <FindingsScreen key={project.id} project={project} manager={session.user.role === 'manager'} onBack={back}/> :
       page === 'map' && project ? <ProjectMap onReview={session.user.role === 'manager' ? () => setPage('findings') : undefined} project={project} rows={projectRows.map(row => ({
         id: row.id, point: row.point, image: { uri: photoFile(row.photo).uri },
-      }))} onBack={back} onCapture={() => {setMessage(''); setPage('capture');}}
+      }))} onBack={back} onCapture={() => {setMessage(''); setPage(sessions.current(owner, project.id) ? 'capture' : 'session-start');}}
         onWork={() => {setMessage(''); setPage('work');}} /> :
-      page === 'capture' && project && !project.is_archived ? <CaptureScreen projectName={project.name} draft={draft}
+      page === 'session-start' && project && !project.is_archived ? <SessionStartScreen projectName={project.name}
+        busy={busy} message={message} onBack={back} onStart={() => run(async () => {
+          startInspectionSession(owner, project.id);
+          setPage('capture');
+        })}/> :
+      page === 'capture' && project && !project.is_archived ? <CaptureScreen projectName={project.name} sessionLabel={sessions.current(owner, project.id)?.id} draft={draft}
         category={category} note={note} freeMB={freeMB()} busy={busy} message={message}
         onBack={back} onPhoto={() => run(takePhoto)} onCategory={setCategory} onNote={setNote}
         onPin={pin => setDraft(previous => previous && { ...previous, pin })}
@@ -199,7 +205,7 @@ export default function App() {
         onBack={back} onSignOut={() => run(signOut)}
         items={projectRows.map(row => {
           const point = JSON.parse(row.point);
-          return { id: row.id, category: point.category, capturedAt: point.captured_at, note: point.note,
+          return { id: row.id, sessionId: point.session_client_uuid, observationNumber: point.observation_number, category: point.category, capturedAt: point.captured_at, note: point.note,
             ready: !!row.ready, syncStatus: syncStatuses[row.id] ?? (row.upload ? 'Photo upload started - check to resume' : undefined),
             photo: { uri: photoFile(row.photo).uri } };
         })}

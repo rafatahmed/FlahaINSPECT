@@ -101,6 +101,8 @@ export class SyncService {
       items: split.items.map((row) => ({
         id: row.id,
         client_uuid: row.clientUuid,
+        session_client_uuid: row.sessionId,
+        observation_number: row.observationNumber,
         project_id: row.projectId,
         inspector_id: row.inspectorId,
         category: row.category,

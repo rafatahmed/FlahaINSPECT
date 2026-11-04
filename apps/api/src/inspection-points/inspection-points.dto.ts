@@ -2,6 +2,7 @@ import {
   IsBoolean,
   IsDateString,
   IsIn,
+  IsInt,
   IsNumber,
   IsObject,
   IsOptional,
@@ -13,6 +14,11 @@ import {
 } from 'class-validator';
 
 export class CreateInspectionPointDto {
+  @IsOptional() @IsUUID() session_client_uuid?: string;
+  @IsOptional() @IsUUID() session_device_id?: string;
+  @IsOptional() @IsDateString() session_started_at?: string;
+  @IsOptional() @IsInt() @Min(1) @Max(2147483647) observation_number?: number;
+
   @IsUUID()
   client_uuid!: string;
 

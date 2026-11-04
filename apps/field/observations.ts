@@ -2,6 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import { File, Paths } from 'expo-file-system';
 import * as Crypto from 'expo-crypto';
 import { api, origin } from './api';
+import { createSessionStore } from './session-store';
 
 export type Category = 'normal' | 'defect' | 'note';
 type Point = { client_uuid: string; project_id: string; category: Category; note: string;
@@ -12,18 +13,22 @@ db.execSync(`CREATE TABLE IF NOT EXISTS observation (
   id TEXT PRIMARY KEY, owner TEXT NOT NULL, point TEXT NOT NULL, photo TEXT NOT NULL,
   hash TEXT NOT NULL, upload TEXT, ready INTEGER NOT NULL DEFAULT 0);
   CREATE TABLE IF NOT EXISTS project (owner TEXT PRIMARY KEY, id TEXT NOT NULL, name TEXT NOT NULL);`);
+export const sessions = createSessionStore(db);
+export const startInspectionSession = (owner: string, projectId: string) =>
+  sessions.start(owner, projectId, Crypto.randomUUID(), sessions.device(Crypto.randomUUID()), new Date().toISOString());
 export const photoFile = (id: string) => new File(Paths.document, id + '.jpg');
 export const list = (owner: string) => db.getAllSync<Row>('SELECT * FROM observation WHERE owner=? ORDER BY rowid DESC', owner);
 
 export async function save(owner: string, point: Point, uri: string) {
+  const session = sessions.current(owner, point.project_id);
+  if (!session) throw new Error('Start an inspection session before saving.');
   const photo = Crypto.randomUUID();
   const file = photoFile(photo);
   new File(uri).copy(file);
   try {
     const digest = await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, await file.bytes());
     const hash = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
-    db.runSync('INSERT INTO observation(id,owner,point,photo,hash) VALUES (?,?,?,?,?)',
-      point.client_uuid, owner, JSON.stringify(point), photo, hash);
+    sessions.save(owner, session.id, point, photo, hash);
   } catch (error) {
     file.delete();
     throw error;
@@ -33,7 +38,12 @@ export async function save(owner: string, point: Point, uri: string) {
 export async function sync(row: Row, onProgress?: (status: string) => void) {
   const point: Point = JSON.parse(row.point);
   onProgress?.('Sending observation...');
-  await api('/inspection-points', point);
+  const accepted = await api('/inspection-points', point);
+  const numbered = point as Point & {session_client_uuid?: string; observation_number?: number};
+  if (numbered.session_client_uuid && (accepted.point?.session_client_uuid !== numbered.session_client_uuid ||
+      accepted.point?.observation_number !== numbered.observation_number)) {
+    throw new Error('This API does not confirm session numbering. Your evidence remains on this phone.');
+  }
   onProgress?.('Observation accepted - preparing photo');
   const file = photoFile(row.photo);
   const { photo } = await api('/photos', { client_uuid: row.photo, inspection_point_client_uuid: row.id,

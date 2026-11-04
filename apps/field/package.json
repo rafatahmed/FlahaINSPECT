@@ -29,7 +29,8 @@
     "dev:iphone": "expo start --dev-client --tunnel --port 8083 --max-workers 2",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "private": true
 }
