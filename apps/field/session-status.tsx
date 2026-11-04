@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
 import { CloseSession } from './close-session';
+import type { AdministrativeClosure } from './session-store';
 import { api } from './api';
 import { color } from './field-brand';
 type State = {
   id: string;
   ended_at: string | null;
-  closure?: {
-    id: string;
-    actor_id: string;
-    closed_at: string;
-    reason: string;
-  } | null;
+  closure?: AdministrativeClosure | null;
   last_contact_at: string | null;
   known_pending: number | null;
   known_failed: number | null;
