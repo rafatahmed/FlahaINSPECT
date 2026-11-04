@@ -117,15 +117,15 @@ export function PointEditor({ point, canEdit }: { point: Point; canEdit: boolean
         <p className="muted">Inspector {point.inspector_id}</p>
         <p className="muted">Accuracy {point.accuracy_m ?? '—'} m</p>
         <p className="muted">Outside boundary: {point.outside_boundary ? 'yes' : 'no'}</p>
-        <label>Field note</label>
-        <textarea readOnly value={point.note ?? ''} rows={4} />
+        <label htmlFor="field-note">Field note</label>
+        <textarea id="field-note" readOnly value={point.note ?? ''} rows={4} />
         {canEdit ? <>
-          <label>Remarks</label>
-          <textarea maxLength={4000} value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={4} />
-          <label>Recommended procedure</label>
-          <textarea maxLength={4000} value={procedure} onChange={(e) => setProcedure(e.target.value)} rows={4} />
-          <label>Status</label>
-          <select value={status} onChange={(e) => setStatus(e.target.value)}>
+          <label htmlFor="remarks">Remarks</label>
+          <textarea id="remarks" maxLength={4000} value={remarks} onChange={(e) => setRemarks(e.target.value)} rows={4} />
+          <label htmlFor="procedure">Recommended procedure</label>
+          <textarea id="procedure" maxLength={4000} value={procedure} onChange={(e) => setProcedure(e.target.value)} rows={4} />
+          <label htmlFor="point-status">Status</label>
+          <select id="point-status" value={status} onChange={(e) => setStatus(e.target.value)}>
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
                 {s}
