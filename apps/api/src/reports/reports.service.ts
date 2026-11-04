@@ -9,6 +9,18 @@ import { projectAccess } from '../projects/project-access';
 import { StorageService } from '../storage/storage.service';
 import { assertReportPointCap, canEnqueueReport, canGenerateReport } from './report-policy';
 
+const reportMetadata = {
+  id: reports.id,
+  projectId: reports.projectId,
+  status: reports.status,
+  title: reports.title,
+  pointCount: reports.pointCount,
+  generatedAt: reports.generatedAt,
+  errorMessage: reports.errorMessage,
+  createdAt: reports.createdAt,
+};
+type ReportMetadata = Pick<typeof reports.$inferSelect, keyof typeof reportMetadata>;
+
 @Injectable()
 export class ReportsService {
   constructor(
@@ -92,7 +104,7 @@ export class ReportsService {
     if (access === 'not_found') throw new ApiException(ErrorCode.NOT_FOUND);
     if (access === 'forbidden') throw new ApiException(ErrorCode.FORBIDDEN);
     const rows = await this.db
-      .select()
+      .select(reportMetadata)
       .from(reports)
       .where(eq(reports.projectId, projectId))
       .orderBy(desc(reports.createdAt));
@@ -103,7 +115,7 @@ export class ReportsService {
     if (!canGenerateReport(actor.role)) {
       throw new ApiException(ErrorCode.FORBIDDEN);
     }
-    const [row] = await this.db.select().from(reports).where(eq(reports.id, id)).limit(1);
+    const [row] = await this.db.select({ ...reportMetadata, storageKey: reports.storageKey }).from(reports).where(eq(reports.id, id)).limit(1);
     if (!row) throw new ApiException(ErrorCode.NOT_FOUND);
     const project = await this.loadProject(row.projectId);
     const access = projectAccess(actor, project, await this.isMember(actor.id, row.projectId));
@@ -136,7 +148,7 @@ export class ReportsService {
   }
 
   private publicReport(
-    row: typeof reports.$inferSelect,
+    row: ReportMetadata,
     download: { url: string; expires_in: number } | null,
   ) {
     return {
